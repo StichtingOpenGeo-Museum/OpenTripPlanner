@@ -142,7 +142,7 @@ otp.locale.Dutch = {
     {
         walk         : "Lopen",
         walk_toward  : "Loop richting",
-        walk_verb    : "Loop",
+        walk_verb    : "Loop"
         bike         : "Fietsen",
         bike_toward  : "Fiets",
         bike_verb    : "Fiets",
@@ -169,7 +169,7 @@ otp.locale.Dutch = {
     labels : 
     {
         agency_msg   : "Uitgevoerd door",
-        agency_msg_tt: "Open website van vervoerder in nieuw venster...",
+        agency_msg_tt: "Open website van vervoerder in aparte window...",
         about        : "Over",
         stop_id      : "Haltenummer",
         trip_details : "Reisdetails",
@@ -217,10 +217,10 @@ otp.locale.Dutch = {
         minute         : "minuut",
         minutes        : "minuten",
         minute_abbrev  : "min",
-        minutes_abbrev : "mins",
+        minutes_abbrev : "min",
         second_abbrev  : "s",
         seconds_abbrev : "s",
-        format         : "F jS, Y @ H:i",
+        format         : "j F Y @ H:i",
         date_format    : "d-m-Y",
         time_format    : "H:i",
         months         : ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
@@ -230,7 +230,7 @@ otp.locale.Dutch = {
     {
         labels :
         {
-            panelTitle : "System Map"
+            panelTitle : "Lijnenkaart"
         }
     },
 
@@ -301,8 +301,8 @@ otp.locale.Dutch = {
         {
             200: "Plan OK",
             500: "Server fout",
-            400: "Trip buiten bekend gebied",
-            404: "Pad niet gevonden",
+            400: "Reis buiten bekend gebied",
+            404: "Geen route gevonden",
             406: "Geen OV tijden gevonden",
             408: "Resultaat niet op tijd gevonden",
             413: "Ongeldige parameter",
@@ -326,7 +326,7 @@ otp.locale.Dutch = {
     
         arriveDepart: 
         [
-          ['false', 'Vertrek'],
+          ['false', 'Vertrek'], 
           ['true',  'Aankomst']
         ],
     
@@ -368,4 +368,3 @@ otp.locale.Dutch = {
 
     CLASS_NAME : "otp.locale.Dutch"
 };
-
