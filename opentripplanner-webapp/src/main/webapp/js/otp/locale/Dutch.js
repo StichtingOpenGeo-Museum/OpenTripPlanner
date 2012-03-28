@@ -221,7 +221,7 @@ otp.locale.Dutch = {
         second_abbrev  : "s",
         seconds_abbrev : "s",
         format         : "j F Y @ H:i",
-        date_format    : "d-m-Y",
+        date_format    : "m-d-Y",
         time_format    : "H:i",
         months         : ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
     },
