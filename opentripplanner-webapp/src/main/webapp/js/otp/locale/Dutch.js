@@ -142,7 +142,7 @@ otp.locale.Dutch = {
     {
         walk         : "Lopen",
         walk_toward  : "Loop richting",
-        walk_verb    : "Loop"
+        walk_verb    : "Loop",
         bike         : "Fietsen",
         bike_toward  : "Fiets",
         bike_verb    : "Fiets",
