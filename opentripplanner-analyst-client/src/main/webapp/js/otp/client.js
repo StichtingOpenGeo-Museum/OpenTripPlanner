@@ -17,8 +17,10 @@ var ottawa        = new L.LatLng(45.4131, -75.63806);
 var sanfrancisco  = new L.LatLng(37.7805, -122.419);
 var dc            = new L.LatLng(38.8951, -77.03666);
 var new_carrolton = new L.LatLng(38.9538, -76.8851);
+var netherlands   = new L.LatLng(52.2433, 5.634167);
+var amsterdam   = new L.LatLng(52.3666, 4.883333);
 
-var initLocation = new_carrolton;
+var initLocation = amsterdam;
 
 var map = new L.Map('map', {
 	minZoom : 10,
