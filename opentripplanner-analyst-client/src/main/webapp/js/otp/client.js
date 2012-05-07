@@ -18,9 +18,10 @@ var sanfrancisco  = new L.LatLng(37.7805, -122.419);
 var dc            = new L.LatLng(38.8951, -77.03666);
 var new_carrolton = new L.LatLng(38.9538, -76.8851);
 var netherlands   = new L.LatLng(52.2433, 5.634167);
-var amsterdam   = new L.LatLng(52.3666, 4.883333);
+var amsterdamcs   = new L.LatLng(52.3783, 4.90063);
+var schipholns    = new L.LatLng(52.3095, 4.7623);
 
-var initLocation = amsterdam;
+var initLocation = schipholns;
 
 var map = new L.Map('map', {
 	minZoom : 10,
@@ -47,8 +48,8 @@ var aerialLayer = new L.TileLayer(aerialURL,
 var flags = {
 	twoEndpoint: false,
 	// note times are in UTC
-    startTime: '2012-06-06T14:00:00Z',
-    endTime: '2012-06-06T16:00:00Z'
+    startTime: '2012-04-23T14:00:00Z',
+    endTime: '2012-04-23T16:00:00Z'
 };
 
 var params = {
