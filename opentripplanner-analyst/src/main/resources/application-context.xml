@@ -11,7 +11,7 @@
 	<import resource="classpath:org/opentripplanner/application-context.xml" />
 	
 	<bean id="graphService" class="org.opentripplanner.routing.impl.GraphServiceImpl">
-		<property name="path" value="/home/syncopate/otp_data/dc/" />
+		<property name="path" value="/var/otp/graphs/" />
 	</bean>
 
 	<bean id="sptService" class="org.opentripplanner.routing.algorithm.GenericAStar" />
