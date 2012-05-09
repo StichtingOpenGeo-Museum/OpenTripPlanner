@@ -12,9 +12,15 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
+var INIT_LOCATION = new L.LatLng(38.9538, -76.8851); // new carrolton
+var AUTO_CENTER_MAP = false;
+var ROUTER_ID = "";
+
 var map = new L.Map('map', {
 	minZoom : 10,
-	maxZoom : 16
+	maxZoom : 16,
+	// what we really need is a fade transition between old and new tiles without removing the old ones
+	//fadeAnimation: false
 });
 
 var mapboxURL = "http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-streets/{z}/{x}/{y}.png";
@@ -54,6 +60,9 @@ var buildQuery = function(params) {
 		if ( ! (vals instanceof Array)) vals = new Array(vals);
 		for (i in vals) { 
 			val = vals[i]; // js iterates over indices not values!
+			// skip params that are empty or stated to be the same as previous
+			if (val == '' || val == 'same')
+				continue;
 			param = [encodeURIComponent(key), encodeURIComponent(val)].join('=');
 			ret.push(param);
 		}
@@ -67,6 +76,7 @@ var analystLayer = new L.TileLayer(analystUrl + buildQuery(params), {attribution
 var refresh = function () {
 	var o = origMarker.getLatLng();
 	var d = destMarker.getLatLng();
+	console.log(flags);
     if (flags.twoEndpoint) {
     	params.fromPlace = [o.lat + "," + o.lng, d.lat + "," + d.lng];
     	// toPlace is not currently used, but must be provided to avoid missing vertex error
@@ -79,9 +89,9 @@ var refresh = function () {
     	params.toPlace = d.lat + "," + d.lng;
     	map.removeLayer(destMarker);
     }
-    console.log(flags);
     console.log(params);
     console.log(analystUrl + buildQuery(params));
+    // can we trigger refresh instead of removing?
 	if (analystLayer != null)
 		map.removeLayer(analystLayer);
 	analystLayer._url = analystUrl + buildQuery(params);
@@ -167,38 +177,41 @@ var overlayMaps = {
 	"Alignment": purpleLineAlignmentLayer
 };
 
-// attempt to get map metadata (bounds) from server
-var request = new XMLHttpRequest();
-request.open("GET", "/opentripplanner-api-webapp/ws/metadata", false); // synchronous request
-request.setRequestHeader("Accept", "application/xml");
-request.send(null);
-console.log(request.responseText);
-console.log(request.status);
-console.log(request.responseXML);
-
-var initLocation;
-if (request.status == 200 && request.responseXML != null) {
-	var x = request.responseXML;
-	var minLat = parseFloat(x.getElementsByTagName('minLatitude')[0].textContent);
-	var maxLat = parseFloat(x.getElementsByTagName('maxLatitude')[0].textContent);
-	var minLon = parseFloat(x.getElementsByTagName('minLongitude')[0].textContent);
-	var maxLon = parseFloat(x.getElementsByTagName('maxLongitude')[0].textContent);
-	var lon = (minLon + maxLon) / 2;
-	var lat = (minLat + maxLat) / 2;
-	initLocation = new L.LatLng(lat, lon);
-} else {
-	initLocation = new L.LatLng(52.3095, 4.7623); // Schiphol/NS
+var initLocation = INIT_LOCATION;
+if (AUTO_CENTER_MAP) {
+	// attempt to get map metadata (bounds) from server
+	var request = new XMLHttpRequest();
+	request.open("GET", "/opentripplanner-api-webapp/ws/metadata", false); // synchronous request
+	request.setRequestHeader("Accept", "application/xml");
+	request.send(null);
+	if (request.status == 200 && request.responseXML != null) {
+		var x = request.responseXML;
+		var minLat = parseFloat(x.getElementsByTagName('minLatitude')[0].textContent);
+		var maxLat = parseFloat(x.getElementsByTagName('maxLatitude')[0].textContent);
+		var minLon = parseFloat(x.getElementsByTagName('minLongitude')[0].textContent);
+		var maxLon = parseFloat(x.getElementsByTagName('maxLongitude')[0].textContent);
+		var lon = (minLon + maxLon) / 2;
+		var lat = (minLat + maxLat) / 2;
+		initLocation = new L.LatLng(lat, lon);
+	} else {
+	        initLocation = new L.LatLng(52.3095, 4.7623); // Schiphol/NS
+	}
 }
 map.setView(initLocation, 12);
-
-// uncomment to override initial location for DC Purple Line demo
-//var new_carrolton = new L.LatLng(38.9538, -76.8851);
-//var origMarker = new L.Marker(new_carrolton, {draggable: true});
-var origMarker = new L.Marker(initLocation, {draggable: true});
-var destMarker = new L.Marker(initLocation, {draggable: true});
-//marker.bindPopup("I am marker.");
+var initLocation2 = new L.LatLng(initLocation.lat + 0.05, initLocation.lng + 0.05);
+console.log(initLocation, initLocation2);
+var greenMarkerIcon = new L.Icon({
+    iconUrl: 'js/lib/leaflet/images/marker-green.png',
+});
+var redMarkerIcon = new L.Icon({
+    iconUrl: 'js/lib/leaflet/images/marker-red.png',
+});
+var origMarker = new L.Marker(initLocation,  {draggable: true, icon: greenMarkerIcon });
+var destMarker = new L.Marker(initLocation2, {draggable: true, icon: redMarkerIcon });
 origMarker.on('dragend', refresh);
+origMarker.bindPopup("I am the origin.");
 destMarker.on('dragend', refresh);
+destMarker.bindPopup("I am the destination.");
 
 map.addLayer(mapboxLayer);
 map.addLayer(origMarker);
@@ -254,11 +267,11 @@ var hagerstrand = function () {
 };
 
 var mapSetupTool = function () {
-    var o = document.getElementById('setupOrigTime').value;
+    var o = document.getElementById('setupTime').value;
     if (o != '')
         flags.startTime = o;
 
-    var d = document.getElementById('setupDestTime').value;
+    var d = document.getElementById('setupTime2').value;
     if (d != '')
         flags.endTime = d;
 
