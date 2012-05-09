@@ -12,7 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
-var INIT_LOCATION = new L.LatLng(38.9538, -76.8851); // new carrolton
+var INIT_LOCATION = new L.LatLng(52.3095, 4.7623); // Schiphol/NS
 var AUTO_CENTER_MAP = false;
 var ROUTER_ID = "";
 
@@ -192,9 +192,7 @@ if (AUTO_CENTER_MAP) {
 		var maxLon = parseFloat(x.getElementsByTagName('maxLongitude')[0].textContent);
 		var lon = (minLon + maxLon) / 2;
 		var lat = (minLat + maxLat) / 2;
-		initLocation = new L.LatLng(lat, lon);
-	} else {
-	        initLocation = new L.LatLng(52.3095, 4.7623); // Schiphol/NS
+                initLocation = new L.LatLng(lat, lon);
 	}
 }
 map.setView(initLocation, 12);
