@@ -192,7 +192,7 @@ if (AUTO_CENTER_MAP) {
 		var maxLon = parseFloat(x.getElementsByTagName('maxLongitude')[0].textContent);
 		var lon = (minLon + maxLon) / 2;
 		var lat = (minLat + maxLat) / 2;
-                initLocation = new L.LatLng(lat, lon);
+		initLocation = new L.LatLng(lat, lon);
 	}
 }
 map.setView(initLocation, 12);
