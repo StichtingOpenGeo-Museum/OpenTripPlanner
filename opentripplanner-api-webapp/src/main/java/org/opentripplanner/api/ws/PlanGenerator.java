@@ -443,6 +443,7 @@ public class PlanGenerator {
         if (trip != null) {
             leg.headsign = trip.getTripHeadsign();
             leg.tripId = trip.getId().getId();
+			leg.routeId = trip.getRoute().getId().getId();
             leg.agencyId = trip.getId().getAgencyId();
             leg.tripShortName = trip.getTripShortName();
             leg.routeShortName = trip.getRoute().getShortName();
