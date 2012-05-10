@@ -1,0 +1,131 @@
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>OTP Analyst Client</title>
+	<link rel="stylesheet" type="text/css" href="js/lib/leaflet/leaflet.css" />
+	<script src="js/lib/leaflet/leaflet.js"></script>
+	<script src="js/lib/proj4js-1.0.3/lib/proj4js-compressed.js"></script>
+	<link rel="stylesheet" type="text/css" href="client.css" />
+</head>
+
+<body>
+	<div id="toolbox">
+		<h1>OpenTripPlanner Analyst</h1>
+		<form>
+			<span>
+				<input type="button" value="Add Purple Line" onclick="purpleOn()" />
+				<input type="button" value="Remove Purple Line" onclick="purpleOff()" />
+			</span>	
+		</form>
+		<form>		
+			<h2>Layer Style</h2>
+			<span>
+				<input type="button" value="Color30" onclick="color30()" />
+				<input type="button" value="Gray" onclick="gray()" />
+				<input type="button" value="Difference" onclick="difference()" /> 
+				<input type="button" value="H&auml;gerstrand" onclick="hagerstrand()" />
+			</span>
+		</form>
+		<form>
+			<h2>Origin Setup</h2>
+			<span>
+				<label for="setupTimeSlider">Time of day:</label>
+				<input type="range" name="setupTimeSlider" min="0" max="24" step="0.25" value="8.0" onchange="setOriginTime(setupTimeSlider.value)" />
+			</span> 
+			<span>
+				<!-- times are in agency timezone unless suffixed by Z  -->
+				<label for="setupTime">Date and time: *</label>
+				<input type="text" class="wideInput" id="setupTime" value="2012-06-06T08:00:00" />
+			</span> 
+			<span>
+				<label for="setupMode">Mode:</label> 
+				<select id="setupMode">
+					<option value="TRANSIT,WALK">Transit</option>
+					<option value="BUSISH,WALK">Bus only</option>
+					<option value="TRAINISH,WALK">Train only</option>
+					<option value="WALK">Walk only</option>
+					<option value="BICYCLE">Bicycle</option>
+					<option value="WALK,BICYCLE">Rented Bicycle</option>
+					<option value="TRANSIT,BICYCLE">Transit &amp; Bicycle</option>
+					<option value="TRANSIT,WALK,BICYCLE">Transit &amp; Rented Bicycle</option>
+				</select>
+			</span>
+			<span>
+				<label for="setupMaxDistance" class="autoWidth">Max on-street distance (m):</label> 
+				<input type="text" id="setupMaxDistance" class="narrowInput" value="2000" /> 
+			</span>
+		</form>
+		<form>
+			<h2>Destination Setup</h2>
+			<span>
+				<label for="setupRelativeTime2">Time relative to origin:</label> 	
+				<select id="setupRelativeTime2" default="+2.0" onchange="setDestinationTime(setupRelativeTime2.value)" >
+					<option value="+0">Same as Origin</option>
+					<option value="+0.25"> +15 minutes</option>
+					<option value="+0.5" > +30 minutes</option>
+					<option value="+0.75"> +45 minutes</option>
+					<option value="+1.0" >  +1 hour</option>
+					<option value="+1.5" >+1.5 hours</option>
+					<option value="+2.0" >  +2 hours</option>
+					<option value="+2.5" >+2.5 hours</option>
+					<option value="+3.0" >  +3 hours</option>
+				</select>
+			</span>
+			<span>
+				<label for="setupTime2">Date and time: *</label> 	
+				<input type="text" id="setupTime2" value="2012-06-06T10:00:00" />
+			</span>
+			<span>
+				<label for="setupMode2">Mode:</label> 
+				<select id="setupMode2">
+					<option value="same">Same as Origin</option>
+					<option value="TRANSIT,WALK">Transit</option>
+					<option value="BUSISH,WALK">Bus only</option>
+					<option value="TRAINISH,WALK">Train only</option>
+					<option value="WALK">Walk only</option>
+					<option value="BICYCLE">Bicycle</option>
+					<option value="WALK,BICYCLE">Rented Bicycle</option>
+					<option value="TRANSIT,BICYCLE">Transit &amp; Bicycle</option>
+					<option value="TRANSIT,WALK,BICYCLE">Transit &amp; Rented Bicycle</option>
+				</select>
+			</span>
+			<span>
+				<label for="setupMaxDistance2">Maximum Walking Distance (m):</label> 
+				<input type="text" id="setupMaxDistance2" class="narrowInput" value="same" /> 
+			</span>
+		</form>
+		<form>
+			<input type="button" value="Refresh Map" onclick="mapSetupTool()" class="fullWidth" />
+			<p class="footnote">
+				* Times must be expressed in ISO8601 combined date/time format: YYYY-MM-DDTHH:MM:SS
+			</p>
+		</form>	
+		<!-- download tool is commented out to avoid over-filling the cache in public use
+		<form>
+			<h2>Download Image Tool</h2>
+			<span>
+				<label for="downloadFormat">Image Format:</label> 
+				<select id="downloadFormat">
+					<option value="image/geotiff">GeoTIFF</option>
+					<option value="image/png">PNG</option>
+					<option value="image/jpeg">JPEG</option>
+				</select>
+			</span>
+			<span>
+				<label for="downloadProj">Projection:</label> 
+				<input type="text" id="downloadProj" value="EPSG:4326" /> 
+			</span>
+			<span>
+				<label for="downloadResolution">Resolution (SRS units):</label> 
+				<input type="text" id="downloadResolution" class="numberField" />
+			</span>
+			<input type="button" value="Download Image" onclick="downloadTool()" class="fullWidth" />
+		</form>
+		 -->
+	</div>
+	<div id="map"> </div>
+	<script type="text/javascript" src="js/otp/client.js"></script>
+</body>
+
+</html>

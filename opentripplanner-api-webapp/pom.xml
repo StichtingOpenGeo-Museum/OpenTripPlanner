@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.opentripplanner</groupId>
         <artifactId>opentripplanner</artifactId>
-        <version>0.8.0-SNAPSHOT</version>
+        <version>0.7.4-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -21,6 +21,11 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>opentripplanner-routing</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>opentripplanner-analyst</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

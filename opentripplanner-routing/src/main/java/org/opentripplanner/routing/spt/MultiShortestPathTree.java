@@ -21,17 +21,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.opentripplanner.common.MavenVersion;
 import org.opentripplanner.routing.core.State;
+import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.graph.Vertex;
 
 public class MultiShortestPathTree extends AbstractShortestPathTree {
-    private static final long serialVersionUID = 20110608L; //YYYYMMDDL
+    
+    private static final long serialVersionUID = MavenVersion.VERSION.getUID();
 
     public static final ShortestPathTreeFactory FACTORY = new FactoryImpl();
 
     private Map<Vertex, List<State>> stateSets;
 
-    public MultiShortestPathTree() {
+    public MultiShortestPathTree(RoutingRequest options) {
+        super(options);
         stateSets = new IdentityHashMap<Vertex, List<State>>();
     }
     
@@ -74,7 +78,7 @@ public class MultiShortestPathTree extends AbstractShortestPathTree {
 			return null;
 		State ret = null;
 		for (State s : states) {
-			if (ret == null || s.betterThan(ret)) {
+			if ((ret == null || s.betterThan(ret)) && s.isFinal()) {
 				ret = s;
 			}
 		}
@@ -109,8 +113,8 @@ public class MultiShortestPathTree extends AbstractShortestPathTree {
 
     private static final class FactoryImpl implements ShortestPathTreeFactory {
         @Override
-        public ShortestPathTree create() {
-            return new MultiShortestPathTree();
+        public ShortestPathTree create(RoutingRequest options) {
+            return new MultiShortestPathTree(options);
         }
     }
 
