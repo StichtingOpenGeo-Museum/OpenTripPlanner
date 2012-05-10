@@ -1,9 +1,16 @@
 package org.opentripplanner.analyst.core;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Transparency;
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.IndexColorModel;
+import java.awt.image.WritableRaster;
 import java.util.Arrays;
 
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -42,20 +49,21 @@ public abstract class Tile {
     
     private static IndexColorModel buildDefaultColorMap() {
     	Color[] palette = new Color[256];
+    	final int ALPHA = 0x60FFFFFF; // ARGB
     	for (int i = 0; i < 28; i++) {
     		// Note: HSB = Hue / Saturation / Brightness
-        	palette[i + 00] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.333f, i * 0.037f, 0.8f), true); // Green
-        	palette[i + 30] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.666f, i * 0.037f, 0.8f), true); // Blue
-        	palette[i + 60] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.144f, i * 0.037f, 0.8f), true); // Yellow
-        	palette[i + 90] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, i * 0.037f, 0.8f), true); // Red
-        	palette[i + 120] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, 0.000f, (29 - i) * 0.0172f), true); // Black
+        	palette[i + 00] =  new Color(ALPHA & Color.HSBtoRGB(0.333f, i * 0.037f, 0.8f), true); // Green
+        	palette[i + 30] =  new Color(ALPHA & Color.HSBtoRGB(0.666f, i * 0.037f, 0.8f), true); // Blue
+        	palette[i + 60] =  new Color(ALPHA & Color.HSBtoRGB(0.144f, i * 0.037f, 0.8f), true); // Yellow
+        	palette[i + 90] =  new Color(ALPHA & Color.HSBtoRGB(0.000f, i * 0.037f, 0.8f), true); // Red
+        	palette[i + 120] = new Color(ALPHA & Color.HSBtoRGB(0.000f, 0.000f, (29 - i) * 0.0172f), true); // Black
         }
     	for (int i = 28; i < 30; i++) {
-        	palette[i + 00] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.333f, (30 - i) * 0.333f, 0.8f), true); // Green
-        	palette[i + 30] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.666f, (30 - i) * 0.333f, 0.8f), true); // Blue
-        	palette[i + 60] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.144f, (30 - i) * 0.333f, 0.8f), true); // Yellow
-        	palette[i + 90] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, (30 - i) * 0.333f, 0.8f), true); // Red
-        	palette[i + 120] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, 0.000f, (29 - i) * 0.0172f), true); // Black
+        	palette[i + 00] =  new Color(ALPHA & Color.HSBtoRGB(0.333f, (30 - i) * 0.333f, 0.8f), true); // Green
+        	palette[i + 30] =  new Color(ALPHA & Color.HSBtoRGB(0.666f, (30 - i) * 0.333f, 0.8f), true); // Blue
+        	palette[i + 60] =  new Color(ALPHA & Color.HSBtoRGB(0.144f, (30 - i) * 0.333f, 0.8f), true); // Yellow
+        	palette[i + 90] =  new Color(ALPHA & Color.HSBtoRGB(0.000f, (30 - i) * 0.333f, 0.8f), true); // Red
+        	palette[i + 120] = new Color(ALPHA & Color.HSBtoRGB(0.000f, 0.000f, (29 - i) * 0.0172f), true); // Black
     	}
         for (int i = 150; i < palette.length; i++) {
         	palette[i] = new Color(0x00000000, true);
@@ -154,25 +162,27 @@ public abstract class Tile {
     }
 
     protected BufferedImage getEmptyImage(Style style) {
-        BufferedImage image;
-        switch (style) {
+        IndexColorModel colorMap = getMapForStyle(style);
+        if (colorMap == null)
+        	return new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        else
+        	return new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, colorMap);
+    }
+    
+    protected static IndexColorModel getMapForStyle(Style style) {
+    	switch (style) {
         case GRAY :
-            image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
-            break;
+        	return null;
         case DIFFERENCE :
-            image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, DIFFERENCE_COLOR_MAP);
-            break;
+            return DIFFERENCE_COLOR_MAP;
         case TRANSPARENT :
-            image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, TRANSPARENT_COLOR_MAP);
-            break;
+            return TRANSPARENT_COLOR_MAP;
         case MASK :
-            image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, MASK_COLOR_MAP);
-            break;
+            return MASK_COLOR_MAP;
         case COLOR30 :
         default :
-            image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, DEFAULT_COLOR_MAP);
+            return DEFAULT_COLOR_MAP;
         }
-        return image;
     }
     
     public BufferedImage generateImage(ShortestPathTree spt, RenderRequest renderRequest) {
@@ -231,13 +241,32 @@ public abstract class Tile {
 
     public abstract Sample[] getSamples();
 
+    public static BufferedImage getLegend(Style style, int width, int height) {
+    	return getLegend(getMapForStyle(style), width, height);
+    }
+
     public static BufferedImage getLegend(IndexColorModel model, int width, int height) {
-        BufferedImage legend = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, model);
-        byte[] pixels = ((DataBufferByte)legend.getRaster().getDataBuffer()).getData();
+        final int NBANDS = 150;
+        final int LABEL_SPACING = 30; 
+        if (width < 140 || width > 2000)
+            width = 140;
+        if (height < 25 || height > 2000)
+            height = 25;
+        if (model == null)
+            return null;
+        WritableRaster raster = model.createCompatibleWritableRaster(width, height);
+        byte[] pixels = ((DataBufferByte) raster.getDataBuffer()).getData();
         for (int row = 0; row < height; row++)
-        for (int col = 0; col < width; col++)
-        pixels[row * width + col] = (byte)col;
-		return legend;
+            for (int col = 0; col < width; col++)
+                pixels[row * width + col] = (byte) (col * NBANDS / width);
+        BufferedImage legend = model.convertToIntDiscrete(raster, false);
+        Graphics2D gr = legend.createGraphics();
+        gr.setColor(new Color(0));
+        gr.drawString("travel time (minutes)", 0, 10);
+        float scale = width / (float) NBANDS;
+        for (int i = 0; i < NBANDS; i += LABEL_SPACING)
+            gr.drawString(Integer.toString(i), i * scale, height);
+        return legend;
     }
 
 }

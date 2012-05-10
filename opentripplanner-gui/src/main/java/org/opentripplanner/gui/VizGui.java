@@ -74,6 +74,7 @@ import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.impl.RetryingPathServiceImpl;
+import org.opentripplanner.routing.impl.GraphServiceImpl;
 import org.opentripplanner.routing.services.SPTService;
 import org.opentripplanner.routing.services.StreetVertexIndexService;
 import org.opentripplanner.routing.spt.GraphPath;
@@ -248,6 +249,10 @@ public class VizGui extends JFrame implements VertexSelectionListener {
 
     private Graph graph;
 
+    private GraphServiceImpl graphservice = new GraphServiceImpl() {
+        public Graph getGraph(String routerId) { return graph; }
+    };
+
     private StreetVertexIndexService indexService;
 
     private SPTService sptService = new GenericAStar();
@@ -276,6 +281,8 @@ public class VizGui extends JFrame implements VertexSelectionListener {
             e.printStackTrace();
         }
         indexService = graph.streetIndex;
+        pathservice.graphService = graphservice;
+        pathservice.sptService   = sptService;
         setTitle("VizGui: " + graphName);
         init();
     }
@@ -862,6 +869,8 @@ public class VizGui extends JFrame implements VertexSelectionListener {
     	// there should be a ui element for walk distance and optimize type
     	options.setOptimize(OptimizeType.QUICK);
         options.setMaxWalkDistance(Double.MAX_VALUE);
+        options.from = from;
+        options.to   = to;
         //options.remainingWeightHeuristic = new BidirectionalRemainingWeightHeuristic(graph);
         System.out.println("--------");
         System.out.println("Path from " + from + " to " + to + " at " + when);
