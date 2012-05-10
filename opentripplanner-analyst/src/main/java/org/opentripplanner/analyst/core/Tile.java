@@ -1,5 +1,6 @@
 package org.opentripplanner.analyst.core;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.awt.image.IndexColorModel;
@@ -40,6 +41,39 @@ public abstract class Tile {
     }
     
     private static IndexColorModel buildDefaultColorMap() {
+    	Color[] palette = new Color[256];
+    	for (int i = 0; i < 28; i++) {
+    		// Note: HSB = Hue / Saturation / Brightness
+        	palette[i + 00] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.333f, i * 0.037f, 0.8f), true); // Green
+        	palette[i + 30] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.666f, i * 0.037f, 0.8f), true); // Blue
+        	palette[i + 60] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.144f, i * 0.037f, 0.8f), true); // Yellow
+        	palette[i + 90] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, i * 0.037f, 0.8f), true); // Red
+        	palette[i + 120] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, 0.000f, (29 - i) * 0.0172f), true); // Black
+        }
+    	for (int i = 28; i < 30; i++) {
+        	palette[i + 00] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.333f, (30 - i) * 0.333f, 0.8f), true); // Green
+        	palette[i + 30] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.666f, (30 - i) * 0.333f, 0.8f), true); // Blue
+        	palette[i + 60] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.144f, (30 - i) * 0.333f, 0.8f), true); // Yellow
+        	palette[i + 90] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, (30 - i) * 0.333f, 0.8f), true); // Red
+        	palette[i + 120] = new Color(0xA0FFFFFF & Color.HSBtoRGB(0.000f, 0.000f, (29 - i) * 0.0172f), true); // Black
+    	}
+        for (int i = 150; i < palette.length; i++) {
+        	palette[i] = new Color(0x00000000, true);
+        }
+        byte[] r = new byte[256];
+        byte[] g = new byte[256];
+        byte[] b = new byte[256];
+        byte[] a = new byte[256];
+        for (int i = 0; i < palette.length; i++) {
+        	r[i] = (byte)palette[i].getRed();
+        	g[i] = (byte)palette[i].getGreen();
+        	b[i] = (byte)palette[i].getBlue();
+        	a[i] = (byte)palette[i].getAlpha();
+        }
+        return new IndexColorModel(8, 256, r, g, b, a);
+    }
+
+    private static IndexColorModel buildOldDefaultColorMap() {
         byte[] r = new byte[256];
         byte[] g = new byte[256];
         byte[] b = new byte[256];
@@ -196,5 +230,14 @@ public abstract class Tile {
     }
 
     public abstract Sample[] getSamples();
+
+    public static BufferedImage getLegend(IndexColorModel model, int width, int height) {
+        BufferedImage legend = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_INDEXED, model);
+        byte[] pixels = ((DataBufferByte)legend.getRaster().getDataBuffer()).getData();
+        for (int row = 0; row < height; row++)
+        for (int col = 0; col < width; col++)
+        pixels[row * width + col] = (byte)col;
+		return legend;
+    }
 
 }
