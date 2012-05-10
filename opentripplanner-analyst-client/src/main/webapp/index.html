@@ -27,8 +27,12 @@
 				<input type="button" value="H&auml;gerstrand" onclick="hagerstrand()" />
 			</span>
 		</form>
-		<form action="#" onsubmit="return mapSetupTool()">
+		<form>
 			<h2>Origin Setup</h2>
+			<span>
+				<label for="setupTimeSlider">Time of day:</label>
+				<input type="range" name="setupTimeSlider" min="0" max="24" step="0.25" value="8.0" onchange="setOriginTime(setupTimeSlider.value)" />
+			</span> 
 			<span>
 				<!-- times are in agency timezone unless suffixed by Z  -->
 				<label for="setupTime">Date and time: *</label>
@@ -56,8 +60,8 @@
 			<h2>Destination Setup</h2>
 			<span>
 				<label for="setupRelativeTime2">Time relative to origin:</label> 	
-				<select id="setupRelativeTime2" default="+2.0" >
-					<option value="same">Same as Origin</option>
+				<select id="setupRelativeTime2" default="+2.0" onchange="setDestinationTime(setupRelativeTime2.value)" >
+					<option value="+0">Same as Origin</option>
 					<option value="+0.25"> +15 minutes</option>
 					<option value="+0.5" > +30 minutes</option>
 					<option value="+0.75"> +45 minutes</option>
@@ -70,7 +74,6 @@
 			</span>
 			<span>
 				<label for="setupTime2">Date and time: *</label> 	
-				<!-- maybe add +/- half hours selector -->
 				<input type="text" id="setupTime2" value="2012-06-06T10:00:00" />
 			</span>
 			<span>
@@ -93,34 +96,32 @@
 			</span>
 		</form>
 		<form>
-			<input type="submit" value="Set Up Map" class="fullWidth" />
+			<input type="button" value="Refresh Map" onclick="mapSetupTool()" class="fullWidth" />
 			<p class="footnote">
 				* Times must be expressed in ISO8601 combined date/time format: YYYY-MM-DDTHH:MM:SS
 			</p>
 		</form>	
 		<!-- download tool is commented out to avoid over-filling the cache in public use
-		<div class="tool">
+		<form>
 			<h2>Download Image Tool</h2>
-			<form action="#" onsubmit="return downloadTool();">
-				<span>
-					<label for="downloadFormat">Image Format:</label> 
-					<select id="downloadFormat">
-						<option value="image/geotiff">GeoTIFF</option>
-						<option value="image/png">PNG</option>
-						<option value="image/jpeg">JPEG</option>
-					</select>
-				</span>
-				<span>
-					<label for="downloadProj">Projection:</label> 
-					<input type="text" id="downloadProj" value="EPSG:4326" /> 
-				</span>
-				<span>
-					<label for="downloadResolution">Resolution (SRS units):</label> 
-					<input type="text" id="downloadResolution" class="numberField" />
-				</span>
-				<input type="submit" value="Download Image" class="toolSubmit" />
-			</form>
-		</div>
+			<span>
+				<label for="downloadFormat">Image Format:</label> 
+				<select id="downloadFormat">
+					<option value="image/geotiff">GeoTIFF</option>
+					<option value="image/png">PNG</option>
+					<option value="image/jpeg">JPEG</option>
+				</select>
+			</span>
+			<span>
+				<label for="downloadProj">Projection:</label> 
+				<input type="text" id="downloadProj" value="EPSG:4326" /> 
+			</span>
+			<span>
+				<label for="downloadResolution">Resolution (SRS units):</label> 
+				<input type="text" id="downloadResolution" class="numberField" />
+			</span>
+			<input type="button" value="Download Image" onclick="downloadTool()" class="fullWidth" />
+		</form>
 		 -->
 	</div>
 	<div id="map"> </div>
