@@ -175,6 +175,9 @@ public class Leg {
     @XmlAttribute
     public String alightRule;
 
+    @XmlAttribute
+    public Boolean rentedBike;
+
     /**
      * bogus walk/bike/car legs are those that have 0.0 distance, 
      * and just one instruction

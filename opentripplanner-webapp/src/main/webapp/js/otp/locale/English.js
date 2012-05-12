@@ -17,7 +17,6 @@ otp.namespace("otp.locale");
 /**
   * @class
   */
-
 otp.locale.English = {
 
     config :
@@ -351,12 +350,23 @@ otp.locale.English = {
             ['80467',  '50 miles'],
             ['160934',  '100 miles']
         ],
-    
+
         mode : 
         [
             ['TRANSIT,WALK', 'Transit'],
-// DO WE REALLY NEED THIS?  ISN'T BUS & TRAIN the same as TRANSIT, WALK
-//          ['BUSISH,TRAINISH,WALK', 'Bus & Train'],
+            ['BUSISH,WALK', 'Bus only'],
+            ['TRAINISH,WALK', 'Train only'],
+            ['WALK', 'Walk only'],
+            ['BICYCLE', 'Bicycle'],
+            ['TRANSIT,BICYCLE', 'Transit & Bicycle']
+        ],
+
+        // TODO: remove this hack, and provide code that allows the mode array to be configured with different transit modes.
+        //       (note that we've been broken for awhile here, since many agencies don't have a 'Train' mode either...this needs attention)
+        // IDEA: maybe we start with a big array (like below), and the pull out modes from this array when turning off various modes...
+        with_bikeshare_mode : 
+        [
+            ['TRANSIT,WALK', 'Transit'],
             ['BUSISH,WALK', 'Bus only'],
             ['TRAINISH,WALK', 'Train only'],
             ['WALK', 'Walk only'],
@@ -375,3 +385,4 @@ otp.locale.English = {
 
     CLASS_NAME : "otp.locale.English"
 };
+
