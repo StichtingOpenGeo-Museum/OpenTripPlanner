@@ -11,7 +11,6 @@ if(typeof(otp) == "undefined" || otp == null) otp = {};
 if(typeof(otp.config) == "undefined" || otp.config == null) otp.config = {};
 if(typeof(otp.config.locale) == "undefined" || otp.config.locale == null) otp.config.locale = otp.locale.Dutch;
 
-
 // step 2: create an object of default otp.config default values (see step3 where we apply this to any existing config)
 otp.config_defaults = {
     routerId      : "",
@@ -25,6 +24,8 @@ otp.config_defaults = {
 
         // options to turn stuff on / off on the planner
         options        : {
+            showBikeshareMode     : true,   // turn on/off the bikeshare options in the mode pull down
+            showTrainMode         : true,   // turn on/off the train options in the mode pull down
             showWheelchairForm    : true,   // turn on/off the wheelchair check box (on by default)
             showIntermediateForms : true,   // turn on/off the ability to plan routes with intermediate points 
             showStopCodes         : true,   // show stop codes as part of the itinerary

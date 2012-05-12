@@ -26,13 +26,18 @@ import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
 import org.opentripplanner.routing.edgetype.RentABikeOffEdge;
 import org.opentripplanner.routing.edgetype.RentABikeOnEdge;
+import org.opentripplanner.routing.edgetype.loader.LinkRequest;
 import org.opentripplanner.routing.edgetype.loader.NetworkLinkerLibrary;
+import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.services.GraphService;
 import org.opentripplanner.routing.vertextype.BikeRentalStationVertex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class BikeRentalUpdater implements Runnable {
+    private static final Logger _log = LoggerFactory.getLogger(BikeRentalUpdater.class);
 
     Map<BikeRentalStation, BikeRentalStationVertex> verticesByStation = new HashMap<BikeRentalStation, BikeRentalStationVertex>();
 
@@ -66,20 +71,26 @@ public class BikeRentalUpdater implements Runnable {
     
     @Override
     public void run() {
-        if (!source.update())
+        _log.debug("Updating bike rental stations from " + source);
+        if (!source.update()) {
+            _log.debug("No updates");
             return;
-        
+        }
         List<BikeRentalStation> stations = source.getStations();
         Set<BikeRentalStation> stationSet = new HashSet<BikeRentalStation>();
         for (BikeRentalStation station : stations) {
             service.addStation(station);
             String id = station.id;
             stationSet.add(station);
-            BikeRentalStationVertex vertex = verticesByStation.get(id);
+            BikeRentalStationVertex vertex = verticesByStation.get(station);
             if (vertex == null) {
-                vertex = new BikeRentalStationVertex(graph, "bike rental station " + id, station.x,
+                String name = "bike rental station " + id;
+                vertex = new BikeRentalStationVertex(graph, name, station.x,
                         station.y, station.name, station.bikesAvailable, station.spacesAvailable);
-                networkLinkerLibrary.connectVertexToStreets(vertex);
+                LinkRequest request = networkLinkerLibrary.connectVertexToStreets(vertex);
+                for (Edge e : request.getEdgesAdded()) {
+                    graph.addTemporaryEdge(e);
+                }
                 verticesByStation.put(station, vertex);
                 new RentABikeOnEdge(vertex, vertex);
                 new RentABikeOffEdge(vertex, vertex);
