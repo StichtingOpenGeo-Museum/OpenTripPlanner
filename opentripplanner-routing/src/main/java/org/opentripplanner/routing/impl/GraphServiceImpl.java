@@ -14,6 +14,7 @@
 package org.opentripplanner.routing.impl;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,7 +26,6 @@ import org.opentripplanner.routing.services.GraphService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Service;
 
 @Scope("singleton")
 public class GraphServiceImpl implements GraphService {
@@ -42,7 +42,7 @@ public class GraphServiceImpl implements GraphService {
     
     private String defaultRouterId = "";
 
-    private boolean synchronousReload = true;
+    private boolean preloadGraphs = true;
 
     public void setPath(String path) {
         this.pathPattern = path;
@@ -53,8 +53,14 @@ public class GraphServiceImpl implements GraphService {
         //////////////////
     }
 
-    @Override
     @PostConstruct // This means it will run on startup
+    public void preloadGraphs() {
+    	if (preloadGraphs) {
+    		getGraph(null); // pre-load the default graph
+    	}
+    }
+
+    @Override
     public Graph getGraph() {
         return getGraph(null);
     }
@@ -73,8 +79,10 @@ public class GraphServiceImpl implements GraphService {
         LOG.debug("graph for routerId '{}' is at {}", routerId, graphFile.getAbsolutePath());
         if (graphFile == null || !graphFile.exists()) {
             LOG.warn("graph file not found: {}", graphFile);
-            if (routerId.equals(defaultRouterId))
-            	throw new RuntimeException("graph for default routerId does not exist: " + graphFile);
+            if (routerId.equals(defaultRouterId)) {
+            	LOG.warn("graph for default routerId {} does not exist at {}", routerId, graphFile);
+            	return null;
+            }
             return getGraph(null); // fall back on default if graph does not exist
         }
         /* this really needs a readers/writer lock */
@@ -100,8 +108,8 @@ public class GraphServiceImpl implements GraphService {
             LOG.warn("attempt to navigate up the directory hierarchy using a routerId");
             return null;
         } else {
-            String fileName = pathPattern.replace("{}", routerId);
-            return new File(fileName.concat("/Graph.obj"));
+            String path = pathPattern.replace("{}", routerId);
+            return new File(path, "Graph.obj");
         }
     }
 
@@ -115,5 +123,10 @@ public class GraphServiceImpl implements GraphService {
 
     public void setDefaultRouterId(String routerId) {
     	this.defaultRouterId = routerId;
+    }
+
+    @Override
+    public Collection<String> getGraphIds() {
+        return graphs.keySet();
     }
 }

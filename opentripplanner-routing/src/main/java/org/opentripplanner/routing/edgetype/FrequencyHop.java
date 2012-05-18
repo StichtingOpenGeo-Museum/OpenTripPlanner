@@ -18,34 +18,32 @@ import org.opentripplanner.common.geometry.DistanceLibrary;
 import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.gtfs.GtfsLibrary;
 import org.opentripplanner.routing.core.EdgeNarrative;
+import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.StateEditor;
 import org.opentripplanner.routing.core.TraverseMode;
-import org.opentripplanner.routing.core.RoutingRequest;
-import org.opentripplanner.routing.vertextype.PatternStopVertex;
+import org.opentripplanner.routing.graph.AbstractEdge;
+import org.opentripplanner.routing.vertextype.TransitVertex;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 
-/**
- * A transit vehicle's journey between departure at one stop and arrival at the next.
- * This version represents a set of such journeys specified by a TripPattern.
- */
-public class PatternHop extends PatternEdge implements OnBoardForwardEdge, OnBoardReverseEdge, HopEdge {
+public class FrequencyHop extends AbstractEdge implements OnBoardForwardEdge, OnBoardReverseEdge, HopEdge {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2389378459266920841L;
 
-    private Stop start, end;
-
+    private FrequencyBasedTripPattern pattern;
+    private Stop start;
+    private Stop end;
     private int stopIndex;
+    private Geometry geometry;
 
-    private Geometry geometry = null;
-
-    public PatternHop(PatternStopVertex from, PatternStopVertex to, Stop start, Stop end, int stopIndex,
-            TripPattern tripPattern) {
-        super(from, to, tripPattern);
-        this.start = start;
-        this.end = end;
+    public FrequencyHop(TransitVertex depart, TransitVertex arrive, Stop s0, Stop s1,
+            int stopIndex, FrequencyBasedTripPattern pattern) {
+        super(depart, arrive);
+        this.pattern = pattern;
+        this.start = s0;
+        this.end = s1;
         this.stopIndex = stopIndex;
     }
 
@@ -54,24 +52,24 @@ public class PatternHop extends PatternEdge implements OnBoardForwardEdge, OnBoa
     }
 
     public TraverseMode getMode() {
-        return GtfsLibrary.getTraverseMode(pattern.getExemplar().getRoute());
+        return GtfsLibrary.getTraverseMode(pattern.getTrip().getRoute());
     }
 
     public String getName() {
-        return GtfsLibrary.getRouteName(pattern.getExemplar().getRoute());
+        return GtfsLibrary.getRouteName(pattern.getTrip().getRoute());
     }
     
     public State optimisticTraverse(State state0) {
-    	int runningTime = pattern.getBestRunningTime(stopIndex);
-    	StateEditor s1 = state0.edit(this);
-    	s1.incrementTimeInSeconds(runningTime);
-    	s1.incrementWeight(runningTime);
-    	return s1.makeState();
+        int runningTime = pattern.getRunningTime(stopIndex);
+        StateEditor s1 = state0.edit(this);
+        s1.incrementTimeInSeconds(runningTime);
+        s1.incrementWeight(runningTime);
+        return s1.makeState();
     }
 
     @Override
     public double timeLowerBound(RoutingRequest options) {
-        return pattern.getBestRunningTime(stopIndex);
+        return pattern.getRunningTime(stopIndex);
     }
     
     @Override
@@ -80,16 +78,15 @@ public class PatternHop extends PatternEdge implements OnBoardForwardEdge, OnBoa
     }
     
     public State traverse(State s0) {
-        int trip = s0.getTrip();
-        int runningTime = pattern.getRunningTime(stopIndex, trip);
-        EdgeNarrative en = new TransitNarrative(pattern.getTrip(trip), pattern.getHeadsign(stopIndex, trip), this);
+        int runningTime = pattern.getRunningTime(stopIndex);
+        EdgeNarrative en = new TransitNarrative(pattern.getTrip(), pattern.getHeadsign(stopIndex), this);
         StateEditor s1 = s0.edit(this, en);
         s1.incrementTimeInSeconds(runningTime);
         if (s0.getOptions().isArriveBy())
             s1.setZone(getStartStop().getZoneId());
         else
             s1.setZone(getEndStop().getZoneId());
-        s1.setRoute(pattern.getExemplar().getRoute().getId());
+        s1.setRoute(pattern.getTrip().getRoute().getId());
         s1.incrementWeight(runningTime);
         return s1.makeState();
     }
@@ -120,6 +117,7 @@ public class PatternHop extends PatternEdge implements OnBoardForwardEdge, OnBoa
     }
 
     public String toString() {
-    	return "PatternHop(" + getFromVertex() + ", " + getToVertex() + ")";
+        return "PatternHop(" + getFromVertex() + ", " + getToVertex() + ")";
     }
+
 }

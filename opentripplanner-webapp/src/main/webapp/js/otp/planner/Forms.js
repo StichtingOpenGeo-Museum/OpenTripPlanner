@@ -39,6 +39,7 @@ otp.planner.StaticForms = {
     // forms & stores
     m_panel               : null,
     m_routerIdForm        : null,
+    m_preferredRoutes     : '',
 
     m_fromForm            : null,
     m_toForm              : null,
@@ -101,9 +102,7 @@ otp.planner.StaticForms = {
         otp.planner.StaticForms.THIS = this;
     },
 
-    /**
-     * 
-     */
+    /** */
     getPanel : function()
     {
         return this.m_panel;
@@ -211,20 +210,7 @@ otp.planner.StaticForms = {
             waitMsg : this.locale.tripPlanner.labels.submitMsg,
             params  : triParams
         }
-        if(otp.util.ObjUtils.isNumber(this.planner.maxTransfers))
-        {
-            data.maxTransfers = this.planner.maxTransfers;
-
-// TODO : need to move this down to mainPanel for it to work
-//        need to fix api, so that it can ignore non integer (including null) values for maxTransfers
-            this.m_routerIdForm = new Ext.form.Hidden({
-                name:  'maxTransfers',
-                value: this.planner.maxTransfers
-            });
-        }
         this.m_panel.form.submit(data);
-
-        // analytics
         otp.util.Analytics.gaEvent(otp.util.Analytics.OTP_TRIP_SUBMIT);
     },
 
@@ -251,7 +237,8 @@ otp.planner.StaticForms = {
             fromPlace : fromPlace,
             toPlace   : toPlace,
             date      : date,
-            time      : time
+            time      : time,
+            preferredRoutes : this.m_preferredRoutes
         });
     },
 
@@ -334,9 +321,7 @@ otp.planner.StaticForms = {
     },
 
 
-    /**
-     * 
-     */
+    /** */
     clear : function()
     {
         this.collapseComboBoxes();
@@ -486,6 +471,9 @@ otp.planner.StaticForms = {
                 forms.m_date.setRawValue(params.on);
                 date = true;
             }
+
+            if(params.preferredRoutes)
+                this.m_preferredRoutes = params.preferredRoutes;
 
             // arrive by parameter 
             if(params.arrParam && (params.arrParam.indexOf("rive") > 0 || params.arrParam == "true"))
@@ -789,7 +777,30 @@ otp.planner.StaticForms = {
         this.m_toPlace   = new Ext.form.Hidden({name: 'toPlace',   value: ''});
         this.m_fromPlace = new Ext.form.Hidden({name: 'fromPlace', value: ''});
         var dateParam    = new Ext.form.Hidden({name: 'date',      value: ''});
+        var prefRoutes   = new Ext.form.Hidden({name: 'preferredRoutes', value: ''});
         //this.m_intermediatePlaces = new Ext.form.Hidden({name: 'intermediatePlaces', value: ''});
+
+        var forms = [  
+                fromToFP,
+                optFP,
+                dateParam,
+                prefRoutes,
+                this.m_routerIdForm,
+                this.m_toPlace,
+                this.m_fromPlace,
+                //this.m_intermediatePlaces,
+                this.m_submitButton
+        ];
+
+        if(otp.util.ObjUtils.isNumber(this.planner.maxTransfers))
+        {
+            var m = this.planner.maxTransfers;
+            var maxT = new Ext.form.Hidden({
+                name:  'maxTransfers',
+                value: m
+            });
+            forms.push(maxT);
+        }
 
         var conf = {
             title:       this.locale.tripPlanner.labels.tabTitle,
@@ -797,15 +808,7 @@ otp.planner.StaticForms = {
             buttonAlign: 'center',
             border:      false,
             keys:        {key: [10, 13], scope: this, handler: this.submit},
-            items:       [  fromToFP,
-                            optFP,
-                            dateParam,
-                            this.m_routerIdForm,
-                            this.m_toPlace,
-                            this.m_fromPlace,
-                            //this.m_intermediatePlaces,
-                            this.m_submitButton
-                         ],
+            items:       forms,
 
             // configure how to read the XML Data
             reader:      this.m_xmlRespRecord,
@@ -814,7 +817,7 @@ otp.planner.StaticForms = {
             errorReader: new Ext.form.XmlErrorReader()
         };
         this.m_panel = new Ext.FormPanel(conf);
-        
+
         this.m_panel.on({
                 scope:           this,
                 beforeaction:    this.preSubmit,

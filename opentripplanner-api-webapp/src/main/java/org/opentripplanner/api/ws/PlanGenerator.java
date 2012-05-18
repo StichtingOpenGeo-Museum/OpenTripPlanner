@@ -31,29 +31,27 @@ import org.opentripplanner.api.model.RelativeDirection;
 import org.opentripplanner.api.model.TripPlan;
 import org.opentripplanner.api.model.WalkStep;
 import org.opentripplanner.common.geometry.DirectionUtils;
+import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.common.geometry.PackedCoordinateSequence;
 import org.opentripplanner.routing.core.EdgeNarrative;
+import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
-import org.opentripplanner.routing.core.RoutingRequest;
-import org.opentripplanner.routing.graph.Edge;
-import org.opentripplanner.routing.edgetype.Dwell;
+import org.opentripplanner.routing.edgetype.DwellEdge;
 import org.opentripplanner.routing.edgetype.EdgeWithElevation;
-import org.opentripplanner.routing.edgetype.Hop;
-import org.opentripplanner.routing.edgetype.LegSwitchingEdge;
-import org.opentripplanner.routing.edgetype.PatternDwell;
-import org.opentripplanner.routing.edgetype.PatternHop;
-import org.opentripplanner.routing.edgetype.PatternInterlineDwell;
-import org.opentripplanner.routing.edgetype.FreeEdge;
 import org.opentripplanner.routing.edgetype.ElevatorAlightEdge;
-import org.opentripplanner.routing.edgetype.PreBoardEdge;
-import org.opentripplanner.routing.edgetype.PreAlightEdge;
+import org.opentripplanner.routing.edgetype.FreeEdge;
+import org.opentripplanner.routing.edgetype.HopEdge;
+import org.opentripplanner.routing.edgetype.LegSwitchingEdge;
 import org.opentripplanner.routing.edgetype.PlainStreetEdge;
+import org.opentripplanner.routing.edgetype.PreAlightEdge;
+import org.opentripplanner.routing.edgetype.PreBoardEdge;
 import org.opentripplanner.routing.edgetype.RentABikeOnEdge;
 import org.opentripplanner.routing.edgetype.TinyTurnEdge;
 import org.opentripplanner.routing.error.PathNotFoundException;
 import org.opentripplanner.routing.error.TrivialPathException;
 import org.opentripplanner.routing.error.VertexNotFoundException;
+import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.patch.Alert;
@@ -71,14 +69,11 @@ import org.springframework.stereotype.Service;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
 
 @Service @Scope("singleton")
 public class PlanGenerator {
 
     private static final Logger LOG = LoggerFactory.getLogger(PlanGenerator.class);
-
-    private GeometryFactory geometryFactory = new GeometryFactory();
 
     @Autowired public PathService pathService;
     
@@ -345,7 +340,7 @@ public class PlanGenerator {
                         itinerary.transfers++;
                         leg.boardRule = (String) state.getExtension("boardAlightRule");
                     }
-                } else if (backEdge instanceof Hop || backEdge instanceof PatternHop) {
+                } else if (backEdge instanceof HopEdge) {
                     pgstate = PlanGenState.TRANSIT;
                     fixupTransitLeg(leg, state, transitIndex);
                     leg.stop = new ArrayList<Place>();
@@ -371,7 +366,7 @@ public class PlanGenerator {
                         /*
                          * any further transit edge, add "from" vertex to intermediate stops
                          */
-                        if (!(backEdge instanceof Dwell || backEdge instanceof PatternDwell || backEdge instanceof PatternInterlineDwell)) {
+                        if (!(backEdge instanceof DwellEdge)) {
                             Place stop = makePlace(state.getBackState(), true);
                             leg.stop.add(stop);
                         } else if (leg.stop.size() > 0) {
@@ -470,7 +465,7 @@ public class PlanGenerator {
             leg.walkSteps = getWalkSteps(states.subList(start, end + 1));
         }
         leg.endTime = makeCalendar(state.getBackState());
-        Geometry geometry = geometryFactory.createLineString(coordinates);
+        Geometry geometry = GeometryUtils.getGeometryFactory().createLineString(coordinates);
         leg.legGeometry = PolylineEncoder.createEncodings(geometry);
         leg.to = makePlace(state, true);
         coordinates.clear();

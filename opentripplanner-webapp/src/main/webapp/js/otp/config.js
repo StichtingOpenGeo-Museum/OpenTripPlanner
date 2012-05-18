@@ -20,10 +20,11 @@ otp.config_defaults = {
     planner : {
         url            : null,
         printUrl       : "print.html",
-        maxTransfers   : null,    // when maxTransfers > 0, this value will be sent down to the api to override any defaults (current api default == 2 as of 3/2012)
+        maxTransfers   : null,  // when maxTransfers != null, value is sent down as maxTransfers param to the api (current api default maxTransfers=2)
 
         // options to turn stuff on / off on the planner
         options        : {
+            showElevationGraph    : true,   // turn on/off the southern panel that displays the elevation data
             showBikeshareMode     : true,   // turn on/off the bikeshare options in the mode pull down
             showTrainMode         : true,   // turn on/off the train options in the mode pull down
             showWheelchairForm    : true,   // turn on/off the wheelchair check box (on by default)
@@ -31,6 +32,8 @@ otp.config_defaults = {
             showStopCodes         : true,   // show stop codes as part of the itinerary
             showAgencyInfo        : true,   // show the 'service run by Yolobus' on each itinerary leg
             showFareInfo          : true,   // show the fare information in the itinerary
+            showReverseButton     : true,   // turn on/off itinerary reverse button
+            showEditButton        : true,   // turn on/off itinerary edit button
             showPrintButton       : true,   // turn on/off itinerary print button
             showLinksButton       : true,   // turn on/off itinerary links button
             useOptionDependencies : true,   // trip form changes based on mode and optimize flags (e.g., bike mode has no wheelchair or walk distance forms etc...) 

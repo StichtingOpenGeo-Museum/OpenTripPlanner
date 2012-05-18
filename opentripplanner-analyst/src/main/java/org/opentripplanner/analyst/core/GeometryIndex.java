@@ -12,6 +12,7 @@ import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.edgetype.StreetTraversalPermission;
 import org.opentripplanner.routing.vertextype.TurnVertex;
 import org.opentripplanner.common.geometry.DistanceLibrary;
+import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.routing.services.GraphService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Component;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.index.strtree.STRtree;
 import com.vividsolutions.jts.operation.distance.DistanceOp;
@@ -33,13 +33,14 @@ public class GeometryIndex implements GeometryIndexService {
     private static final double SEARCH_RADIUS_M = 100; // meters
     private static final double SEARCH_RADIUS_DEG = DistanceLibrary.metersToDegrees(SEARCH_RADIUS_M);
     
-    private GeometryFactory geometryFactory = new GeometryFactory();
     private STRtree pedestrianIndex;
     private STRtree index;
     
     @Autowired
     public void setGraphService(GraphService graphService) {
         Graph graph = graphService.getGraph();
+        if (graph == null) // analyst currently depends on there being a single default graph
+        	return;
         // build a spatial index of road geometries (not individual edges)
         pedestrianIndex = new STRtree();
         index = new STRtree();
@@ -68,7 +69,7 @@ public class GeometryIndex implements GeometryIndexService {
     @Override
     public Vertex getNearestPedestrianStreetVertex(double lon, double lat) {
         Coordinate c = new Coordinate(lon, lat);
-        Point p = geometryFactory.createPoint(c);
+        Point p = GeometryUtils.getGeometryFactory().createPoint(c);
 
         // track best two turn vertices
         TurnVertex closestVertex = null;
