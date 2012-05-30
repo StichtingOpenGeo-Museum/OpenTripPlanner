@@ -14,6 +14,7 @@
 package org.opentripplanner.routing.edgetype;
 
 import org.opentripplanner.gtfs.GtfsLibrary;
+import org.opentripplanner.routing.core.EdgeNarrative;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.StateEditor;
 import org.opentripplanner.routing.core.TraverseMode;
@@ -34,7 +35,7 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
 
     private int stopIndex;
     
-    public PatternDwell(PatternArriveVertex from, PatternDepartVertex to, int stopIndex, TripPattern tripPattern) {
+    public PatternDwell(PatternArriveVertex from, PatternDepartVertex to, int stopIndex, TableTripPattern tripPattern) {
         super(from, to, tripPattern);
         this.stopIndex = stopIndex;
         this.pattern = tripPattern;
@@ -57,8 +58,10 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
     }
 
     public State traverse(State state0) {
-        int dwellTime = pattern.getDwellTime(stopIndex, state0.getTrip());
-        StateEditor s1 = state0.edit(this);
+        int trip = state0.getTrip();
+        int dwellTime = pattern.getDwellTime(stopIndex, trip);
+        EdgeNarrative en = new TransitNarrative(pattern.getTrip(trip), pattern.getHeadsign(stopIndex, trip), this);
+        StateEditor s1 = state0.edit(this, en);
         s1.incrementTimeInSeconds(dwellTime);
         s1.incrementWeight(dwellTime);
         return s1.makeState();
@@ -91,11 +94,11 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
         return "PatternDwell(" + super.toString() + ")";
     }
 
-    public void setPattern(TripPattern pattern) {
+    public void setPattern(TableTripPattern pattern) {
         this.pattern = pattern;
     }
 
-    public TripPattern getPattern() {
+    public TableTripPattern getPattern() {
         return pattern;
     }
 

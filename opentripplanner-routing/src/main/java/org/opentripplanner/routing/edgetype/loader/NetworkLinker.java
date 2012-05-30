@@ -15,10 +15,15 @@ package org.opentripplanner.routing.edgetype.loader;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import org.opentripplanner.common.IterableLibrary;
 import org.opentripplanner.routing.core.GraphBuilderAnnotation;
 import org.opentripplanner.routing.core.GraphBuilderAnnotation.Variety;
+import org.opentripplanner.routing.core.RoutingRequest;
+import org.opentripplanner.routing.core.TraverseMode;
+import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.edgetype.factory.FindMaxWalkDistances;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
@@ -38,6 +43,7 @@ public class NetworkLinker {
     public NetworkLinker(Graph graph, HashMap<Class<?>,Object> extra) {
         this.graph = graph;
         this.networkLinkerLibrary = new NetworkLinkerLibrary(graph, extra);
+        networkLinkerLibrary.options = new RoutingRequest(TraverseMode.BICYCLE);
     }
 
     public NetworkLinker(Graph graph) {
@@ -68,8 +74,13 @@ public class NetworkLinker {
                 }
             }
         }
-        // no longer necessary
-        //networkLinkerLibrary.addAllReplacementEdgesToGraph();
+        //remove replaced edges
+        for (HashSet<StreetEdge> toRemove : networkLinkerLibrary.replacements.keySet()) {
+            for (StreetEdge edge : toRemove) {
+                edge.getFromVertex().removeOutgoing(edge);
+                edge.getToVertex().removeIncoming(edge);
+            }
+        }
         
         // Do we really need this? Commenting out does seem to cause some slowdown. (AMB)
         networkLinkerLibrary.markLocalStops();

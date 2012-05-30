@@ -18,6 +18,7 @@ import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.impl.DefaultRemainingWeightHeuristicFactoryImpl;
 import org.opentripplanner.routing.location.StreetLocation;
+import org.opentripplanner.routing.pathparser.PathParser;
 import org.opentripplanner.routing.services.RemainingWeightHeuristicFactory;
 import org.opentripplanner.routing.vertextype.TransitStop;
 import org.slf4j.Logger;
@@ -72,6 +73,7 @@ public class RoutingContext implements Cloneable {
      */
     public long searchAbortTime = 0;
     
+    public PathParser[] pathParsers = new PathParser[]{}; // { new BasicPathParser() };
     
     /* CONSTRUCTORS */
     
@@ -144,7 +146,7 @@ public class RoutingContext implements Cloneable {
         final long SEC_IN_DAY = 60 * 60 * 24;
         final long time = opt.getSecondsSinceEpoch();
         this.serviceDays = new ArrayList<ServiceDay>(3);
-        if (calendarService == null && (opt.getModes() == null || opt.getModes().contains(TraverseMode.TRANSIT))) {
+        if (calendarService == null && graph.getCalendarService() != null && (opt.getModes() == null || opt.getModes().contains(TraverseMode.TRANSIT))) {
             LOG.warn("RoutingContext has no CalendarService. Transit will never be boarded.");
             return;
         }
