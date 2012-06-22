@@ -7,6 +7,7 @@ import javax.ws.rs.DefaultValue;
 import javax.ws.rs.QueryParam;
 import javax.xml.datatype.DatatypeConfigurationException;
 
+import org.onebusaway.gtfs.model.AgencyAndId;
 import org.opentripplanner.routing.core.OptimizeType;
 import org.opentripplanner.routing.core.TraverseModeSet;
 import org.opentripplanner.routing.core.RoutingRequest;
@@ -114,7 +115,10 @@ public abstract class RoutingResource {
 
     /** If true, goal direction is turned off and a full path tree is built (specify only once) */
     @DefaultValue("false") @QueryParam("batch") protected List<Boolean> batch;
-    
+
+    /** A transit stop required to be the first stop in the search */
+    @DefaultValue("") @QueryParam("startTransitStopId") protected List<String> startTransitStopId;
+
     /** 
      * Build the 0th Request object from the query parameter lists. 
      * @throws ParameterException when there is a problem interpreting a query parameter
@@ -212,8 +216,16 @@ public abstract class RoutingResource {
         boolean tripPlannedForNow = Math.abs(request.getDateTime().getTime() - new Date().getTime()) 
                 < NOW_THRESHOLD_MILLIS;
         request.setUseBikeRentalAvailabilityInformation(tripPlannedForNow);
-        if (intermediatePlaces != null && intermediatePlacesOrdered && request.getModes().isTransit())
-            throw new UnsupportedOperationException("TSP is not supported for transit trips");
+        if (request.getIntermediatePlaces() != null
+                && (request.getModes().isTransit() || 
+                        (request.getModes().getWalk() && 
+                         request.getModes().getBicycle())))
+            throw new UnsupportedOperationException("TSP is not supported for transit or bike share trips");
+
+        String startTransitStopId = get(this.startTransitStopId, n, null);
+        if (startTransitStopId != null && !"".equals(startTransitStopId)) {
+            request.setStartTransitStopId(AgencyAndId.convertFromString(startTransitStopId));
+        }
         return request;
     }
     

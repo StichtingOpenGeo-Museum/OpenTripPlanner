@@ -246,7 +246,10 @@ public class RoutingRequest implements Cloneable, Serializable {
      * irrelevant at that point, since temporary graph elements have been removed and the graph may
      * have been reloaded. 
      */
-    public RoutingContext rctx;    
+    public RoutingContext rctx;
+
+    /** A transit stop that this trip must start from */
+    private AgencyAndId startingTransitStopId;
     
     
     /* CONSTRUCTORS */
@@ -315,10 +318,16 @@ public class RoutingRequest implements Cloneable, Serializable {
             walkingOptions.maxWalkDistance = maxWalkDistance;
             walkingOptions.walkSpeed *= 0.3; //assume walking bikes is slow
             walkingOptions.optimize = optimize;
+            walkingOptions.modes = modes.clone();
+            walkingOptions.modes.setBicycle(false);
+            walkingOptions.modes.setWalk(true);
         } else if (modes.getCar()) {
             walkingOptions = new RoutingRequest();
             walkingOptions.setArriveBy(this.isArriveBy());
             walkingOptions.maxWalkDistance = maxWalkDistance;
+            walkingOptions.modes = modes.clone();
+            walkingOptions.modes.setBicycle(false);
+            walkingOptions.modes.setWalk(true);
         }
     }
 
@@ -706,8 +715,8 @@ public class RoutingRequest implements Cloneable, Serializable {
 
     public void setRoutingContext (Graph graph) {
         if (rctx == null) {
-            this.rctx = new RoutingContext(this, graph); // graphService.getGraph(routerId)
-            // check after reference established to allow temp edge cleanup on exception
+            this.rctx = new RoutingContext(this, graph, null, null, true); // graphService.getGraph(routerId)
+            // check after back reference is established, to allow temp edge cleanup on exceptions
             this.rctx.check();
         } else {
             if (rctx.graph == graph) {
@@ -727,12 +736,17 @@ public class RoutingRequest implements Cloneable, Serializable {
         // FIXME here, or in test, and/or in other places like TSP that use this method
         // if (rctx != null)
         //    this.rctx.destroy();
-        this.rctx = new RoutingContext(this, graph, from, to);
+        this.rctx = new RoutingContext(this, graph, from, to, false);
     }
 
     /** For use in tests. Force RoutingContext to specific vertices rather than making temp edges. */
     public void setRoutingContext (Graph graph, String from, String to) {
         this.setRoutingContext(graph, graph.getVertex(from), graph.getVertex(to));
+    }
+
+    /** Used in internals API. Make a RoutingContext with no origin or destination vertices specified. */
+    public void setDummyRoutingContext (Graph graph) {
+        this.setRoutingContext(graph, "", "");
     }
 
     public RoutingContext getRoutingContext () {
@@ -905,6 +919,14 @@ public class RoutingRequest implements Cloneable, Serializable {
 
     public void setUseBikeRentalAvailabilityInformation(boolean useBikeRentalAvailabilityInformation) {
         this.useBikeRentalAvailabilityInformation = useBikeRentalAvailabilityInformation;
+    }
+
+    public AgencyAndId getStartingTransitStopId() {
+        return startingTransitStopId;
+    }
+
+    public void setStartTransitStopId(AgencyAndId startingTransitStopId) {
+        this.startingTransitStopId = startingTransitStopId;
     }
 
 }

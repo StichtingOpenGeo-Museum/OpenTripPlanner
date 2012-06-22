@@ -22,8 +22,11 @@ import static org.opentripplanner.routing.automata.Nonterminal.*;
  * after entering a station. Reject paths that reach the destination with a rented bicycle. Disallow
  * boarding transit without first parking a car. Reject breaking no-through-traffic rules on driving
  * legs.
+ * 
+ * Despite the name, this actually *ends* at a transit station -- it's used with 
+ * TransitStartPathServiceImpl to implement start-at-transit (first/last/next/prev trip) 
  */
-public class BasicPathParser extends PathParser {
+public class TransitStartPathParser extends PathParser {
 
     private static final int STATION = 1;
 
@@ -33,7 +36,6 @@ public class BasicPathParser extends PathParser {
 
     private static final DFA DFA;
     static {
-
         Nonterminal bikeNonStreet = star(choice(StreetEdge.CLASS_CROSSING,
                 StreetEdge.CLASS_OTHERPATH));
 
@@ -45,11 +47,8 @@ public class BasicPathParser extends PathParser {
                      bikeNonStreet),
                 seq(star(StreetEdge.CLASS_STREET), bikeNonStreet));
 
-        Nonterminal transitLeg = seq(plus(STATION), plus(TRANSIT), plus(STATION));
-        Nonterminal itinerary = seq(optionalNontransitLeg, star(transitLeg, optionalNontransitLeg));
+        Nonterminal itinerary = seq(star(STATION), optionalNontransitLeg, star(STATION));
         DFA = itinerary.toDFA().minimize();
-        System.out.println(DFA.toGraphViz());
-        System.out.println(DFA.dumpTable());
     }
 
     @Override
