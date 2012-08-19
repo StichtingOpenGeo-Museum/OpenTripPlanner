@@ -2,10 +2,14 @@ package org.opentripplanner.updater.stoptime;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 
 import javax.annotation.PostConstruct;
@@ -15,7 +19,7 @@ import lombok.Setter;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.opentripplanner.common.CTX;
 import org.opentripplanner.routing.trippattern.Update;
-import org.opentripplanner.routing.trippattern.UpdateList;
+import org.opentripplanner.routing.trippattern.UpdateBlock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZFrame;
@@ -33,14 +37,25 @@ public class KV8ZMQUpdateStreamer implements UpdateStreamer {
     @Setter private String defaultAgencyId = "";
     @Setter private String address = "tcp://node01.post.openov.nl:7817";
     @Setter private static String feed = "/GOVI/KV8"; 
+    @Setter private static String messageLogFile;
+    
+    Writer logWriter;
     
     @PostConstruct
     public void connectToFeed() {
         subscriber.connect(address);
         subscriber.subscribe(feed.getBytes());
+        if (messageLogFile != null) {
+            try {
+                logWriter = new FileWriter(messageLogFile);
+            } catch (IOException e) {
+                LOG.warn("problem opening message log file: {}", e);
+                logWriter = null;
+            }
+        }
     }
     
-    public UpdateList getUpdates() {
+    public List<Update> getUpdates() {
         /* recvMsg blocks -- unless you call Socket.setReceiveTimeout() */
         // so when timeout occurs, it does not return null, but a reference to some
         // static ZMsg object?
@@ -52,9 +67,9 @@ public class KV8ZMQUpdateStreamer implements UpdateStreamer {
         }
         /* 
          * on subscription failure, message will not be null or empty, but its content length 
-         * will be 0 and bomb the gunzip below.
+         * will be 0 and bomb the gunzip below (or does it block forever?)
          */        
-        UpdateList ret = null;
+        List<Update> ret = null;
         try {
             Iterator<ZFrame> frames = msg.iterator();
             // pop off first frame, which contains "/GOVI/KV8" (the feed name) (isn't there a method for this?)
@@ -77,37 +92,48 @@ public class KV8ZMQUpdateStreamer implements UpdateStreamer {
             byte[] b = new byte[4096];
             for (int n; (n = messageStream.read(b)) != -1;) {
                 buffer.write(b, 0, n);
-            }            
+            }   
+            if (logWriter != null) {
+                logWriter.write(buffer.toString());
+                logWriter.append('\n');
+            }
             ret = parseCTX(buffer.toString());
-            if (++count % 1 == 0) {
-                LOG.debug("decoded gzipped CTX message #{}: {}", count, msg);
+            count += 1;
+            LOG.debug("decoded gzipped CTX message #{}: {}", count, msg);
+            if (count % 1000 == 0) {
+                LOG.info("received {} KV8 messages.", count);
             }
         } catch (Exception e) {
             LOG.error("exception while decoding (unzipping) incoming CTX message: {}", e.getMessage()); 
         } finally {
-            msg.destroy(); // is this necessary?
+            msg.destroy(); // is this necessary? does ZMQ lib automatically free mem?
         }
         return ret;
     }
     
-    public UpdateList parseCTX(String ctxString) {
+    public List<Update> parseCTX(String ctxString) {
+        //LOG.debug(ctxString);
         CTX ctx = new CTX(ctxString);
-        UpdateList ret = new UpdateList(null); // indicate that updates may have mixed trip IDs
+        // at this point, updates may have mixed trip IDs, dates, etc.
+        List<Update> ret = new ArrayList<Update>(); 
         for (int i = 0; i < ctx.rows.size(); i++) {
             HashMap<String, String> row = ctx.rows.get(i);
             int arrival = secondsSinceMidnight(row.get("ExpectedArrivalTime"));
             int departure = secondsSinceMidnight(row.get("ExpectedDepartureTime"));
             Update u = new Update(
                     kv7TripId(row),   
-                    row.get("UserStopCode"), 
+                    kv7StopId(row), 
                     Integer.parseInt(row.get("UserStopOrderNumber")), 
-                    arrival, departure);
-            ret.addUpdate(u);
+                    arrival, departure,
+                    kv8Status(row));
+            ret.add(u);
         }
         return ret;
     }
 
-    /** no good for DST */
+    /** 
+     * no good for DST 
+     */
     private int secondsSinceMidnight(String hhmmss) {
         String[] time = hhmmss.split(":");
         int hours = Integer.parseInt(time[0]);
@@ -131,4 +157,21 @@ public class KV8ZMQUpdateStreamer implements UpdateStreamer {
         return new AgencyAndId(row.get("DataOwnerCode"), tripId);
     }
     
+    /** 
+     * Convert KV7 fields into a GTFS stop_id. DataOwnerCode and UserStopCode are the agency's 
+     * internal identifiers for a stop, so should not be used. TimingPointCode is a unique 
+     * nationwide (feed-wide) identifier which includes those UserStopCodes.
+     */
+    public String kv7StopId (HashMap<String, String> row) {
+        return row.get("TimingPointCode");
+    }
+    
+    public Update.Status kv8Status(HashMap<String, String> row) {
+        String s = row.get("TripStopStatus");
+        if (s.equals("DRIVING"))
+            return Update.Status.PREDICTION;
+        else
+            return Update.Status.valueOf(s);
+    }
+
 }
