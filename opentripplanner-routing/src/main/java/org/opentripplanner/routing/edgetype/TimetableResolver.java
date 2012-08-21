@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.edgetype.TableTripPattern.Timetable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +21,9 @@ import org.slf4j.LoggerFactory;
  * 
  * At this point, only one writing thread at a time is supported.
  */
-public class TimetableSnapshot {
+public class TimetableResolver {
     
-    private static final Logger LOG = LoggerFactory.getLogger(TimetableSnapshot.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TimetableResolver.class);
 
     // Use HashMap not Map so we can clone.
     // if this turns out to be slow/spacious we can use an array with integer pattern indexes
@@ -32,8 +31,10 @@ public class TimetableSnapshot {
     
     private Set<Timetable> dirty = new HashSet<Timetable>();
     
-    /** Returns an updated timetable for the specified pattern if one is available in this snapshot, 
-     * or the originally scheduled timetable if there are no updates in this snapshot. */
+    /** 
+     * Returns an updated timetable for the specified pattern if one is available in this snapshot, 
+     * or the originally scheduled timetable if there are no updates in this snapshot. 
+     */
     public Timetable resolve(TableTripPattern pattern) {
         Timetable timetable = timetables.get(pattern);
         if (timetable == null) {
@@ -45,8 +46,9 @@ public class TimetableSnapshot {
     }
     
     public Timetable modify(TableTripPattern pattern) {
-        if (dirty == null) // this snapshot was already committed for reading
-            throw new ConcurrentModificationException();
+        if (dirty == null)
+            throw new ConcurrentModificationException(
+                    "This TimetableResolver snapshot was already committed for reading.");
         Timetable existing = resolve(pattern);
         if (dirty.contains(existing)) {
             return existing; // allows modifying multiple trips on a single pattern
@@ -78,8 +80,8 @@ public class TimetableSnapshot {
     
     /* TODO: reverse this procedure - have a method for producing an immutable snapshot of a mutable working buffer */
     @SuppressWarnings("unchecked")
-    public TimetableSnapshot mutableCopy() {
-        TimetableSnapshot ret = new TimetableSnapshot();
+    public TimetableResolver mutableCopy() {
+        TimetableResolver ret = new TimetableResolver();
         ret.timetables = (HashMap<TableTripPattern, Timetable>) this.timetables.clone();
         return ret;
     }

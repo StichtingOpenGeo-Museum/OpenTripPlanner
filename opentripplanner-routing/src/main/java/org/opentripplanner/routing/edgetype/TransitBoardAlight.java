@@ -134,7 +134,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
             if (state0.getBackEdge() instanceof TransitBoardAlight) {
                 return null;
             }
-            EdgeNarrative en = new TransitNarrative(state0.getTripTimes().trip, this);
+            EdgeNarrative en = new TransitNarrative(state0.getTripTimes().getTrip(), this);
             StateEditor s1 = state0.edit(this, en);
             
             if (boarding)
@@ -170,7 +170,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
 
             if (options.isReverseOptimizeOnTheFly()) {
                 int thisDeparture = state0.getTripTimes().getDepartureTime(stopIndex);
-                int numTrips = getPattern().getNumTrips(); 
+                int numTrips = getPattern().getNumScheduledTrips(); 
                 int nextDeparture;
 
                 s1.setLastNextArrivalDelta(Integer.MAX_VALUE);
