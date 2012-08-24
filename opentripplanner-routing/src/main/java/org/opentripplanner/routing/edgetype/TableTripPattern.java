@@ -33,8 +33,6 @@ import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.trippattern.DecayingDelayTripTimes;
 import org.opentripplanner.routing.trippattern.ScheduledTripTimes;
 import org.opentripplanner.routing.trippattern.TripTimes;
-import org.opentripplanner.routing.trippattern.TripTimesUtil;
-import org.opentripplanner.routing.trippattern.Update;
 import org.opentripplanner.routing.trippattern.UpdateBlock;
 import org.opentripplanner.routing.trippattern.UpdatedTripTimes;
 import org.slf4j.Logger;
@@ -271,6 +269,9 @@ public class TableTripPattern implements TripPattern, Serializable {
             timetable = snapshot.resolve(this);
         else
             timetable = scheduledTimetable;
+//        System.out.println("resolver: " + 
+//            (timetable != scheduledTimetable ? "updated " : "scheduled ") + 
+//            timetable.tripTimes.size() + " trips");
         return timetable.getNextTrip(stopIndex, afterTime, haveBicycle, options);
     }
     
@@ -345,7 +346,7 @@ public class TableTripPattern implements TripPattern, Serializable {
         
         /** 
          * This copy instance method can see the enclosing TripPattern instance, while the copy 
-         * constructor does not. The only publically visible way to make a timetable, and it should
+         * constructor does not. The only publicly visible way to make a timetable, and it should
          * probably be protected.
          */
         public Timetable copy() {
@@ -378,7 +379,6 @@ public class TableTripPattern implements TripPattern, Serializable {
          * time afterTime. The haveBicycle parameter must be passed in because we cannot determine 
          * whether the user is in possession of a rented bicycle from the options alone.
          */
-        // This method is protected so Lombok won't delegate to it.
         protected TripTimes getNextTrip(int stopIndex, int afterTime, boolean haveBicycle,
                 RoutingRequest options) {
             boolean pickup = true;
@@ -402,7 +402,7 @@ public class TableTripPattern implements TripPattern, Serializable {
                 //     index = departuresIndex[0];
                 // else
                 TripTimes[] index = departuresIndex[stopIndex];
-                int tripIndex = TripTimesUtil.binarySearchDepartures(index, stopIndex, afterTime); 
+                int tripIndex = TripTimes.binarySearchDepartures(index, stopIndex, afterTime); 
                 //these appear to actually be hop indexes, which is what the binary search accepts
                 while (tripIndex < index.length) {
                     TripTimes tt = index[tripIndex];
@@ -422,6 +422,7 @@ public class TableTripPattern implements TripPattern, Serializable {
             for (int i = 0; i < trips.size(); i++) {
                 // grab a reference before tests in case it is swapped out by an update thread
                 TripTimes currTrip = tripTimes.get(i); 
+                //System.out.println("  trip " + (currTrip.isScheduled() ? "sched" : "non"));
                 int currTime = currTrip.getDepartureTime(stopIndex);
                 if (currTime >= afterTime && currTime < bestTime && 
                         tripAcceptable(currTrip.getTrip(), haveBicycle, wheelchair) && 
@@ -438,7 +439,6 @@ public class TableTripPattern implements TripPattern, Serializable {
          * time afterTime. The haveBicycle parameter must be passed in because we cannot determine 
          * whether the user is in possession of a rented bicycle from the options alone.
          */
-        // This method is protected so Lombok won't delegate to it.
         // TODO this could be merged with the departure search, there is lots of duplicate code.
         protected TripTimes getPreviousTrip(int stopIndex, int beforeTime, boolean haveBicycle, 
                 RoutingRequest options) {
@@ -456,7 +456,7 @@ public class TableTripPattern implements TripPattern, Serializable {
             if (arrivalsIndex != null) {
                 // search through the sorted list of TripTimes for this particular stop
                 TripTimes[] index = arrivalsIndex[stopIndex];
-                int tripIndex = TripTimesUtil.binarySearchArrivals(index, stopIndex, beforeTime); 
+                int tripIndex = TripTimes.binarySearchArrivals(index, stopIndex, beforeTime); 
                 //these appear to actually be hop indexes, which is what the binary search accepts
                 while (tripIndex >= 0) {
                     TripTimes tt = index[tripIndex];
@@ -615,45 +615,55 @@ public class TableTripPattern implements TripPattern, Serializable {
          * Apply the UpdateBlock to the appropriate ScheduledTripTimes from this Timetable. 
          * The existing TripTimes must not be modified directly because they may be shared with 
          * the underlying scheduledTimetable, or other updated Timetables.
+         * The StoptimeUpdater performs the protective copying of this Timetable. It is not done in 
+         * this update method to avoid repeatedly cloning the same Timetable when several updates 
+         * are applied to it at once.
          * @return whether or not the timetable actually changed as a result of this operation
          * (maybe it should do the cloning and return the new timetable to enforce copy-on-write?) 
          */
         public boolean update(UpdateBlock block) {
-             // Though all timetables have the same trip ordering, some may have extra trips due to 
-             // the dynamic addition of unscheduled trips.
-             // However, we want to apply trip update blocks on top of *scheduled* times 
-            int tripIndex = getTripIndex(block.tripId);
-            if (tripIndex == -1) {
-                LOG.info("tripId {} not found in pattern.", block.tripId);
-                return false;
-            } else {
-                LOG.trace("tripId {} found at index {} (in scheduled timetable)", block.tripId, tripIndex);
-            }
-            // 'stop' Index as in transit stop (not 'end', not 'hop')
-            int stopIndex = block.findUpdateStopIndex(TableTripPattern.this);
-            if (stopIndex == UpdateBlock.MATCH_FAILED) {
-                LOG.warn("Unable to match update block to stopIds.");
-                return false;
-            }
-            TripTimes existingTimes = getTripTimes(tripIndex);
-            ScheduledTripTimes scheduledTimes = existingTimes.getScheduledTripTimes();
-            TripTimes newTimes = new UpdatedTripTimes(scheduledTimes, block, stopIndex);
-            if ( ! TripTimesUtil.timesIncreasing(newTimes)) {
-                LOG.error("Resulting UpdatedTripTimes has non-increasing times.");
-                LOG.error(block.toString());
-                LOG.error(newTimes.toString());
-                LOG.info("Falling back on DecayingDelayTripTimes.");
-                int delay = newTimes.getDepartureTime(stopIndex) - scheduledTimes.getDepartureTime(stopIndex); 
-                newTimes = new DecayingDelayTripTimes(scheduledTimes, stopIndex, delay, 0.7, false);
-                LOG.error(newTimes.toString());
-                if ( ! TripTimesUtil.timesIncreasing(newTimes)) {
-                    LOG.error("Even these trip times are non-increasing. Underlying schedule problem?");
+            try {
+                 // Though all timetables have the same trip ordering, some may have extra trips due to 
+                 // the dynamic addition of unscheduled trips.
+                 // However, we want to apply trip update blocks on top of *scheduled* times 
+                int tripIndex = getTripIndex(block.tripId);
+                if (tripIndex == -1) {
+                    LOG.info("tripId {} not found in pattern.", block.tripId);
+                    return false;
+                } else {
+                    LOG.trace("tripId {} found at index {} (in scheduled timetable)", block.tripId, tripIndex);
+                }
+                // 'stop' Index as in transit stop (not 'end', not 'hop')
+                int stopIndex = block.findUpdateStopIndex(TableTripPattern.this);
+                if (stopIndex == UpdateBlock.MATCH_FAILED) {
+                    LOG.warn("Unable to match update block to stopIds.");
                     return false;
                 }
+                TripTimes existingTimes = getTripTimes(tripIndex);
+                ScheduledTripTimes scheduledTimes = existingTimes.getScheduledTripTimes();
+                TripTimes newTimes = new UpdatedTripTimes(scheduledTimes, block, stopIndex);
+                if ( ! newTimes.timesIncreasing()) {
+                    LOG.warn("Resulting UpdatedTripTimes has non-increasing times. " +
+                             "Falling back on DecayingDelayTripTimes.");
+                    LOG.warn(block.toString());
+                    LOG.warn(newTimes.toString());
+                    int delay = newTimes.getDepartureDelay(stopIndex);
+                    // maybe decay should be applied on top of the update (wrap Updated in Decaying), 
+                    // starting at the end of the update block
+                    newTimes = new DecayingDelayTripTimes(scheduledTimes, stopIndex, delay);
+                    LOG.warn(newTimes.toString());
+                    if ( ! newTimes.timesIncreasing()) {
+                        LOG.error("Even these trip times are non-increasing. Underlying schedule problem?");
+                        return false;
+                    }
+                }
+                // Update succeeded, save the new TripTimes back into this Timetable.
+                this.tripTimes.set(tripIndex, newTimes);
+                return true;
+            } catch (Exception e) { // prevent server from dying while debugging
+                e.printStackTrace();
+                return false;
             }
-            // Update succeeded, save the new TripTimes back into this Timetable.
-            this.tripTimes.set(tripIndex, newTimes);
-            return true;
         }
         
         /**
@@ -668,25 +678,8 @@ public class TableTripPattern implements TripPattern, Serializable {
          */
         public void addTrip(Trip trip, List<StopTime> stopTimes) {
             // TODO: double-check that the stops and pickup/dropoffs are right for this trip
-            int nextIndex = tripTimes.size();
-            tripTimes.add(new ScheduledTripTimes(trip, nextIndex, stopTimes));
+            tripTimes.add(new ScheduledTripTimes(trip, stopTimes));
             trips.add(trip);
-            
-            // stoptimes can have headsign info that overrides the trip's headsign
-            ArrayList<String> headsigns = new ArrayList<String>();
-            boolean allHeadsignsNull = true;
-            for (StopTime st : stopTimes) {
-                String headsign = st.getStopHeadsign();
-                if (headsign != null)
-                    allHeadsignsNull = false;
-                headsigns.add(headsign);
-            }
-            if (allHeadsignsNull)
-                headsigns = null;
-            // there needs to be some provision for extra trips that are not in the underlying schedule
-            TableTripPattern.this.headsigns.add(headsigns);
-            // headsigns should be transposed later and compacted with reused arrays
-            // 1x1 array should always return the same headsign to allow for no change 
         }
 
         /** 

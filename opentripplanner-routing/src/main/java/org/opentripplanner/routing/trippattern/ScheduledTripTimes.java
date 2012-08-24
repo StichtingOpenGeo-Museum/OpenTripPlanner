@@ -4,8 +4,6 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.xml.bind.annotation.XmlElement;
-
 import lombok.Getter;
 
 import org.onebusaway.gtfs.model.StopTime;
@@ -20,26 +18,25 @@ import org.slf4j.LoggerFactory;
  * wrapped in other TripTimes implementations which replace, cancel, or otherwise modify some of 
  * the timetable information.
  */
-public class ScheduledTripTimes implements TripTimes, Serializable {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ScheduledTripTimes.class);
+public class ScheduledTripTimes extends TripTimes implements Serializable {
 
     private static final long serialVersionUID = MavenVersion.VERSION.getUID();
+    private static final Logger LOG = LoggerFactory.getLogger(ScheduledTripTimes.class);
     
     @Getter private final Trip trip;
 
-    /** 
-     * This is kind of ugly, but the headsigns are in the enclosing pattern not here. Also, assuming
-     * we have a reference to the enclosing pattern, this lets us find the equivalent scheduled
-     * TripTimes.
+    /**
+     * Each trip has a defined headsign, but this trip_headsign has been overridden by the 
+     * stop_headsign field in stop_times.txt, the headsigns field will point to an array of
+     * headsigns, one for each stop of the trip. If this field is set to null, this TripTimes 
+     * will get its headsign from the Trip object for every stop.
      */
-    public final int index; 
+    private final String[] headsigns;
     
     /** 
      * The time in seconds after midnight at which the vehicle begins traversing each inter-stop 
      * segment ("hop"). Field is non-final to support compaction.
-     */
-    @XmlElement
+     */ //@XmlElement
     private int[] departureTimes;
 
     /** 
@@ -47,14 +44,12 @@ public class ScheduledTripTimes implements TripTimes, Serializable {
      * inter-stop segment ("hop"). A null value indicates that all dwells are 0-length, and arrival 
      * times are to be derived from the departure times array. Field is non-final to support 
      * compaction.
-     */
-    @XmlElement
+     */ //@XmlElement
     private int[] arrivalTimes; 
 
-    /** The stopTimes are assumed to be pre-filtered, valid, monotonically increasing, etc. */ 
-    public ScheduledTripTimes(Trip trip, int index, List<StopTime> stopTimes) {
+    /** The provided stopTimes are assumed to be pre-filtered, valid, and monotonically increasing. */ 
+    public ScheduledTripTimes(Trip trip, List<StopTime> stopTimes) {
         this.trip = trip;
-        this.index = index;
         int nStops = stopTimes.size();
         int nHops = nStops - 1;
         departureTimes = new int[nHops];
@@ -64,8 +59,27 @@ public class ScheduledTripTimes implements TripTimes, Serializable {
             departureTimes[hop] = stopTimes.get(hop).getDepartureTime();
             arrivalTimes[hop] = stopTimes.get(hop + 1).getArrivalTime();
         }
-        // if all dwell times are 0, arrival times array is not needed. save some memory.
+        this.headsigns = makeHeadsignsArray(stopTimes);
+        // If all dwell times are 0, arrival times array is not needed. Attempt to save some memory.
         this.compact();
+    }
+    
+    private String[] makeHeadsignsArray(List<StopTime> stopTimes) {
+        String tripHeadsign = trip.getTripHeadsign();
+        String[] hs = new String[stopTimes.size()];
+        boolean useHeadsigns = false;
+        int i = 0;
+        for (StopTime st : stopTimes) {
+            String stopHeadsign = st.getStopHeadsign(); 
+            if (!(tripHeadsign.equals(stopHeadsign))) {
+                useHeadsigns = true;
+            }
+            hs[i++] = stopHeadsign;
+        }
+        if (useHeadsigns)
+            return hs;
+        else
+            return null;
     }
     
     @Override
@@ -83,19 +97,6 @@ public class ScheduledTripTimes implements TripTimes, Serializable {
         return this;
     }    
     
-    @Override
-    public int getDwellTime(int hop) {
-        // TODO: Add range checking and -1 error value? see GTFSPatternHopFactory.makeTripPattern().
-        int arrivalTime = getArrivalTime(hop-1);
-        int departureTime = getDepartureTime(hop);
-        return departureTime - arrivalTime;
-    }
-    
-    @Override
-    public int getRunningTime(int hop) {
-        return getArrivalTime(hop) - getDepartureTime(hop);
-    }
-
     @Override
     public int getDepartureTime(int hop) {
         return departureTimes[hop];
@@ -142,13 +143,15 @@ public class ScheduledTripTimes implements TripTimes, Serializable {
     }
 
     public String toString() {
-        return TripTimesUtil.toString(this);
+        return "ScheduledTripTimes\n" + dumpTimes();
     }
     
-    // TODO this is going to require pointers to the enclosing Timetable
     @Override
     public String getHeadsign(int hop) {
-        return "Headsign";
+        if (headsigns == null)
+            return trip.getTripHeadsign();
+        else
+            return headsigns[hop];
     }
 
 }
