@@ -14,23 +14,23 @@
 package org.opentripplanner.routing.edgetype;
 
 import org.opentripplanner.gtfs.GtfsLibrary;
-import org.opentripplanner.routing.core.EdgeNarrative;
+import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.StateEditor;
 import org.opentripplanner.routing.core.TraverseMode;
-import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.trippattern.TripTimes;
 import org.opentripplanner.routing.vertextype.PatternArriveVertex;
 import org.opentripplanner.routing.vertextype.PatternDepartVertex;
 
-import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.LineString;
 
 
 /**
- *  Models waiting in a station on a vehicle.  The vehicle may not change 
+ *  Models waiting in a station on a vehicle.  The vehicle is not permitted to change 
  *  names during this time -- PatternInterlineDwell represents that case.
  */
-public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnBoardReverseEdge, DwellEdge {
+public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnBoardReverseEdge, 
+        DwellEdge {
     
     private static final long serialVersionUID = 1L;
 
@@ -48,7 +48,7 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
     public double getDistance() {
         return 0;
     }
-
+        
     public TraverseMode getMode() {
         return GtfsLibrary.getTraverseMode(getPattern().getExemplar().getRoute());
     }
@@ -61,10 +61,8 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
         //int trip = state0.getTrip();
         TripTimes tripTimes = state0.getTripTimes();
         int dwellTime = tripTimes.getDwellTime(stopIndex);
-        // we wouln't have to look up the headsign for every traversal, only in PlanGenerator
-        EdgeNarrative en = new TransitNarrative(tripTimes.getTrip(), 
-                tripTimes.getHeadsign(stopIndex), this);
-        StateEditor s1 = state0.edit(this, en);
+        StateEditor s1 = state0.edit(this);
+        s1.setBackMode(getMode());
         s1.incrementTimeInSeconds(dwellTime);
         s1.incrementWeight(dwellTime);
         return s1.makeState();
@@ -75,6 +73,7 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
         int dwellTime = getPattern().getBestDwellTime(stopIndex);
         StateEditor s1 = s0.edit(this);
         s1.incrementTimeInSeconds(dwellTime);
+        s1.setBackMode(getMode());
         s1.incrementWeight(dwellTime);
         return s1.makeState();
     }
@@ -89,7 +88,7 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
         return timeLowerBound(options);
     }
 
-    public Geometry getGeometry() {
+    public LineString getGeometry() {
         return null;
     }
 
@@ -101,6 +100,7 @@ public class PatternDwell extends PatternEdge implements OnBoardForwardEdge, OnB
         this.stopIndex = stopIndex;
     }
 
+    @Override
     public int getStopIndex() {
         return stopIndex;
     }

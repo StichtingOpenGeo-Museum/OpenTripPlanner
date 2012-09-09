@@ -14,11 +14,13 @@
 package org.opentripplanner.routing.core;
 
 import java.util.HashMap;
+import java.util.Set;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.opentripplanner.routing.edgetype.TripPattern;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.trippattern.TripTimes;
+import org.opentripplanner.routing.patch.Alert;
 
 /**
  * StateData contains the components of search state that are unlikely to be changed as often as
@@ -63,6 +65,10 @@ public class StateData implements Cloneable {
 
     protected TripPattern lastPattern;
 
+    protected ServiceDay serviceDay;
+
+    protected TraverseMode nonTransitMode;
+
     /** 
      * This is the wait time at the beginning of the trip (or at the end of the trip for
      * reverse searches). In Analyst anyhow, this is is subtracted from total trip length of each
@@ -76,8 +82,34 @@ public class StateData implements Cloneable {
      * that could have been taken. It is used to determine if a path needs reverse-optimization.
      */
     protected int lastNextArrivalDelta;
+    
+    /**
+     * This is a list of notes that should be applied to this state.
+     * This means that we clone StateData before and after a notated edge, but notated edges
+     * are rare enough this likely doesn't matter.
+     * 
+     * @author mattwigway
+     */
+    protected Set<Alert> notes = null;
+    
+    /**
+     * The mode that was used to traverse the backEdge
+     */
+    protected TraverseMode backMode;
 
     public String bikeRentalNetwork;
+
+    public StateData(RoutingRequest options) {
+        TraverseModeSet modes = options.getModes();
+        if (modes.getCar())
+            nonTransitMode = TraverseMode.CAR;
+        else if (modes.getWalk())
+            nonTransitMode =  TraverseMode.WALK;
+        else if (modes.getBicycle())
+            nonTransitMode = TraverseMode.BICYCLE;
+        else
+            nonTransitMode = null;
+    }
 
     protected StateData clone() {
         try {
