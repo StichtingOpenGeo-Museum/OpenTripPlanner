@@ -152,7 +152,8 @@ otp.locale.Dutch = {
         move         : "Ga",
         move_toward  : "Ga naar",
 
-        transfer     : "Stap over",
+        transfer     : "Overstap",
+        transfer_verb: "Stap over", 
         transfers    : "Overstappen",
 
         continue_as  : "Gaat verder als",
