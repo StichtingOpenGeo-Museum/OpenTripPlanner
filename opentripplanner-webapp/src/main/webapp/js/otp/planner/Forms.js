@@ -1270,7 +1270,7 @@ otp.planner.StaticForms = {
             hiddenName:     'maxWalkDistance',
             fieldLabel:     this.locale.tripPlanner.labels.maxWalkDistance,
             store:          this.m_maxWalkDistanceStore,
-            value:          this.m_maxWalkDistanceStore.getAt(2).get('opt'),
+            value:          this.m_maxWalkDistanceStore.getAt(5).get('opt'),
             displayField:   'text',
             valueField:     'opt',
             anchor:         this.FIELD_ANCHOR,
