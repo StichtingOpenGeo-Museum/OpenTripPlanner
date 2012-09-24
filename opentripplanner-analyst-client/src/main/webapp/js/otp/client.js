@@ -12,7 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 */
 
-var INIT_LOCATION = new L.LatLng(38.9538, -76.8851); // new carrolton
+var INIT_LOCATION = new L.LatLng(52.374004,4.890359); // Amsterdam
 var AUTO_CENTER_MAP = true;
 var ROUTER_ID = "";
 
