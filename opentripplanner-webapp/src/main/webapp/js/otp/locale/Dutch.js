@@ -37,7 +37,7 @@ otp.locale.Dutch = {
 
         centerHere       : "Centreer kaart",
         zoomInHere       : "Inzoomen",
-        zoomOutHere      : "Uitzoemen",
+        zoomOutHere      : "Uitzoomen",
         previous         : "Vorige positie",
         next             : "Volgende positie"
     },
