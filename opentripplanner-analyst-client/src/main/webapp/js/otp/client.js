@@ -13,11 +13,11 @@
 */
 
 var INIT_LOCATION = new L.LatLng(52.374004,4.890359); // Amsterdam
-var AUTO_CENTER_MAP = true;
+var AUTO_CENTER_MAP = false;
 var ROUTER_ID = "";
 
 var map = new L.Map('map', {
-	minZoom : 10,
+	minZoom : 7,
 	maxZoom : 17,
 	// what we really need is a fade transition between old and new tiles without removing the old ones
 	//fadeAnimation: false
