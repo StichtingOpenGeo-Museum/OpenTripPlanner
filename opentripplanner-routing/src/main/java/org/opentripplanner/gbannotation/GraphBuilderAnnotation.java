@@ -15,11 +15,10 @@ package org.opentripplanner.gbannotation;
 
 import java.io.Serializable;
 
+import org.opentripplanner.routing.graph.Edge;
+import org.opentripplanner.routing.graph.Vertex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
 
 /**
  * Represents noteworthy events or errors that occur during the graphbuilding process.
@@ -51,16 +50,12 @@ public abstract class GraphBuilderAnnotation implements Serializable {
 
     public abstract String getMessage();
 
-    public static void logSummary(Iterable<GraphBuilderAnnotation> gbas) {
-        Multiset<Class<? extends GraphBuilderAnnotation>> classes = HashMultiset.create();
-        LOG.info("Summary (number of each type of annotation):");
-        for (GraphBuilderAnnotation gba : gbas)
-            classes.add(gba.getClass());
-        for (Multiset.Entry<Class<? extends GraphBuilderAnnotation>> e : classes.entrySet()) {
-            String name = e.getElement().getSimpleName();
-            int count = e.getCount();
-            LOG.info("    {} - {}", name, count);
-        }
+    public Edge getReferencedEdge() {
+        return null;
+    }
+
+    public Vertex getReferencedVertex() {
+        return null;
     }
 
 }
