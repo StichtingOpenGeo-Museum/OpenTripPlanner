@@ -19,6 +19,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -83,7 +84,7 @@ import com.vividsolutions.jts.geom.Geometry;
  * DELETE http://localhost/opentripplanner-api-webapp/ws/routers
  * will de-register all currently registered routerIds.
  * 
- * The GET methods are not secured, but all other methods are secured under ROLE_DEPLOYER.
+ * The GET methods are not secured, but all other methods are secured under ROLE_ROUTERS.
  * See documentation for individual methods for additional parameters.
  */
 @Path("/routers")
@@ -140,7 +141,7 @@ public class Routers {
     /** 
      * Reload the graphs for all registered routerIds from disk.
      */
-    @Secured({ "ROLE_DEPLOYER" })
+    @Secured({ "ROLE_ROUTERS" })
     @PUT @Produces({ MediaType.APPLICATION_JSON })
     public Response reloadGraphs(@QueryParam("path") String path, 
             @QueryParam("preEvict") @DefaultValue("true") boolean preEvict) {
@@ -156,41 +157,52 @@ public class Routers {
      * routerId for the duration of the operation.
      * @param upload read the graph from the PUT data stream instead of from disk.
      */
-    @Secured({ "ROLE_DEPLOYER" })
+    @Secured({ "ROLE_ROUTERS" })
     @PUT @Path("{routerId}") @Produces({ MediaType.TEXT_PLAIN })
-    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     public Response putGraphId(
             @PathParam("routerId") String routerId, 
-            @QueryParam("preEvict") @DefaultValue("true") boolean preEvict, 
-            @QueryParam("upload") @DefaultValue("false") boolean upload,
-            //@QueryParam("loadLevel") @DefaultValue("FULL") LoadLevel level,
-            InputStream is) {
-        Graph graph;
+            @QueryParam("preEvict") @DefaultValue("true") boolean preEvict) {
         if (preEvict) {
             LOG.debug("pre-evicting graph");
             graphService.evictGraph(routerId);
         }
-        if (upload) {
-            LOG.debug("deserializing graph from PUT data stream...");
-            try {
-                graph = Graph.load(is, LoadLevel.FULL);
-                graphService.registerGraph(routerId, graph);
-                return Response.status(Status.CREATED).entity(graph.toString()).build();
-            } catch (Exception e) {
-                return Response.status(Status.BAD_REQUEST).entity(e.toString()).build();
-            }
-        } else { // load from local filesystem
-            LOG.debug("attempting to load graph from server's local filsystem.");
-            boolean success = graphService.registerGraph(routerId, preEvict);
-            if (success)
-                return Response.status(201).entity("graph registered.").build();
-            else
-                return Response.status(404).entity("graph not found or other error.").build();
+        LOG.debug("attempting to load graph from server's local filsystem.");
+        boolean success = graphService.registerGraph(routerId, preEvict);
+        if (success)
+            return Response.status(201).entity("graph registered.").build();
+        else
+            return Response.status(404).entity("graph not found or other error.").build();
+    }
+
+    /** 
+     * Deserialize a graph sent with the HTTP request as POST data, associating it with the given 
+     * routerId.
+     */
+    @Secured({ "ROLE_ROUTERS" })
+    @POST @Path("{routerId}") @Produces({ MediaType.TEXT_PLAIN })
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    public Response postGraphOverWire (
+            @PathParam("routerId") String routerId, 
+            @QueryParam("preEvict") @DefaultValue("true") boolean preEvict, 
+            @QueryParam("loadLevel") @DefaultValue("FULL") LoadLevel level,
+            InputStream is) {
+        if (preEvict) {
+            LOG.debug("pre-evicting graph");
+            graphService.evictGraph(routerId);
+        }
+        LOG.debug("deserializing graph from POST data stream...");
+        Graph graph;
+        try {
+            graph = Graph.load(is, level);
+            graphService.registerGraph(routerId, graph);
+            return Response.status(Status.CREATED).entity(graph.toString()).build();
+        } catch (Exception e) {
+            return Response.status(Status.BAD_REQUEST).entity(e.toString()).build();
         }
     }
 
     /** De-register all registered routerIds, evicting them from memory. */
-    @Secured({ "ROLE_DEPLOYER" })
+    @Secured({ "ROLE_ROUTERS" })
     @DELETE @Produces({ MediaType.TEXT_PLAIN })
     public Response deleteAll() {
         int nEvicted = graphService.evictAll();
@@ -203,7 +215,7 @@ public class Routers {
      * @return status code 200 if the routerId was de-registered, 
      * 404 if the routerId was not registered. 
      */
-    @Secured({ "ROLE_DEPLOYER" })
+    @Secured({ "ROLE_ROUTERS" })
     @DELETE @Path("{routerId}") @Produces({ MediaType.TEXT_PLAIN })
     public Response deleteGraphId(@PathParam("routerId") String routerId) {
         boolean existed = graphService.evictGraph(routerId);
