@@ -556,11 +556,11 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                                 break;
                             case U:
                                 if ((angleDiff <= 150 || angleDiff > 210))
-                                    continue; // not straight
+                                    continue; // not a U turn
                                 break;
                             case STRAIGHT:
-                                if (Math.abs(angleDiff) >= 30)
-                                    continue; // not a U turn
+                                if (angleDiff >= 30 && angleDiff < 330)
+                                    continue; // not straight
                                 break;
                             }
                             TurnRestriction restriction = new TurnRestriction();
@@ -1342,7 +1342,7 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
         }
 
         private boolean isWayRouteable(OSMWithTags way) {
-            if (!(way.hasTag("highway") || way.isTag("railway", "platform")))
+            if (!isOsmEntityHighway(way))
                 return false;
             String highway = way.getTag("highway");
             if (highway != null
@@ -1373,7 +1373,7 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
             if (_relations.containsKey(relation.getId()))
                 return;
 
-            if (relation.isTag("type", "multipolygon") && relation.hasTag("highway")) {
+            if (relation.isTag("type", "multipolygon") && isOsmEntityHighway(relation)) {
                 // OSM MultiPolygons are ferociously complicated, and in fact cannot be processed
                 // without reference to the ways that compose them. Accordingly, we will merely
                 // mark the ways for preservation here, and deal with the details once we have
@@ -1387,7 +1387,7 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                 getLevelsForWay(relation);
             } else if (!(relation.isTag("type", "restriction"))
                     && !(relation.isTag("type", "route") && relation.isTag("route", "road"))
-                    && !(relation.isTag("type", "multipolygon") && relation.hasTag("highway"))
+                    && !(relation.isTag("type", "multipolygon") && isOsmEntityHighway(relation))
                     && !(relation.isTag("type", "level_map"))) {
                 return;
             }
@@ -1397,6 +1397,11 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
             if (_relations.size() % 100 == 0)
                 _log.debug("relations=" + _relations.size());
 
+        }
+
+        /** Some OSM ways are treated as routeable even though they don't have highway= */
+        private boolean isOsmEntityHighway(OSMWithTags osmEntity) {
+            return osmEntity.hasTag("highway") || osmEntity.isTag("public_transport", "platform") || osmEntity.isTag("railway", "platform");
         }
 
         public void secondPhase() {
@@ -1461,7 +1466,7 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                 if (_processedAreas.contains(relation)) {
                     continue;
                 }
-                if (!(relation.isTag("type", "multipolygon") && relation.hasTag("highway"))) {
+                if (!(relation.isTag("type", "multipolygon") && isOsmEntityHighway(relation))) {
                     continue;
                 }
                 // Area multipolygons -- pedestrian plazas
@@ -1510,14 +1515,17 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                         continue;
                     }
 
-                    if (relation.hasTag("highway") && !way.hasTag("highway")) {
-                        way.addTag("highway", relation.getTag("highway"));
+                    String[] relationCopyTags = {"highway", "name", "ref"};
+                    for (String tag : relationCopyTags) {
+                        if (relation.hasTag(tag) && !way.hasTag(tag)) {
+                            way.addTag(tag, relation.getTag(tag));
+                        }
                     }
-                    if (relation.hasTag("name") && !way.hasTag("name")) {
-                        way.addTag("name", relation.getTag("name"));
+                    if (relation.isTag("railway", "platform") && !way.hasTag("railway")) {
+                        way.addTag("railway", "platform");
                     }
-                    if (relation.hasTag("ref") && !way.hasTag("ref")) {
-                        way.addTag("ref", relation.getTag("ref"));
+                    if (relation.isTag("public_transport", "platform") && !way.hasTag("public_transport")) {
+                        way.addTag("public_transport", "platform");
                     }
                 }
             }
