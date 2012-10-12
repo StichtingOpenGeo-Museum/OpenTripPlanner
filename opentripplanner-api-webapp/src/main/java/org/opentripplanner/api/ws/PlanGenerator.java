@@ -194,26 +194,26 @@ public class PlanGenerator {
             }
 
 // debug: push vehicle late status out to UI
-//            if (backEdge instanceof PatternHop) {
-//                TripTimes tt = state.getTripTimes();
-//                int hop = ((PatternHop)backEdge).stopIndex;
-//                LOG.info("{} {}", tt.getTrip().toString(), hop);
-//                if ( ! tt.isScheduled()) {
-//                    int delay = tt.getDepartureDelay(hop);
-//                    String d = "on time";
-//                    if (Math.abs(delay) > 10) {
-//                        d = String.format("%2.1f min %s", delay / 60.0, 
-//                                (delay < 0) ? "early" : "late");
-//                    }
-//                    d = "Using real-time delay information: ".concat(d);
-//                    leg.addAlert(Alert.createSimpleAlerts(d));
-//                    LOG.info(d);
-//                } 
-//                else {
-//                    leg.addAlert(Alert.createSimpleAlerts("Using published timetables."));
-//                    LOG.info("sched");
-//                }
-//            }
+            if (backEdge instanceof PatternHop) {
+                TripTimes tt = state.getTripTimes();
+                int hop = ((PatternHop)backEdge).stopIndex;
+                LOG.info("{} {}", tt.getTrip().toString(), hop);
+                if ( ! tt.isScheduled()) {
+                    int delay = tt.getDepartureDelay(hop);
+                    String d = "on time";
+                    if (Math.abs(delay) > 10) {
+                        d = String.format("%2.1f min %s", delay / 60.0, 
+                                (delay < 0) ? "early" : "late");
+                    }
+                    d = "Using real-time delay information: ".concat(d);
+                    leg.addAlert(Alert.createSimpleAlerts(d));
+                    LOG.info(d);
+                } 
+                else {
+                    leg.addAlert(Alert.createSimpleAlerts("Using published timetables."));
+                    LOG.info("sched");
+                }
+            }
 
             TraverseMode mode = state.getBackMode();
             if (mode != null) {
