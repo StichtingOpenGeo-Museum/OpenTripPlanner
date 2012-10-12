@@ -202,19 +202,17 @@ public class PlanGenerator {
                 LOG.info("{} {}", tt.getTrip().toString(), hop);
                 if ( ! tt.isScheduled()) {
                     int delay = tt.getDepartureDelay(hop);
-                    String d = "on time";
+                    String d = "op tijd";
                     if (Math.abs(delay) > 10) {
                         d = String.format("%2.1f min %s", delay / 60.0, 
-                                (delay < 0) ? "early" : "late");
+                                (delay < 0) ? "vervroegd" : "vertraagd");
                     }
-                    d = "Using real-time delay information: ".concat(d);
+                    d = "Met behulp van real-time reisinformatie: ".concat(d);
                     leg.addAlert(Alert.createSimpleAlerts(d));
                     LOG.info(d);
-                } 
-                else {
-                    leg.addAlert(Alert.createSimpleAlerts("Using published timetables."));
-                    LOG.info("sched");
-                }
+                }else{
+		    LOG.info("sched");
+		} 
             }
 
             TraverseMode mode = state.getBackMode();
