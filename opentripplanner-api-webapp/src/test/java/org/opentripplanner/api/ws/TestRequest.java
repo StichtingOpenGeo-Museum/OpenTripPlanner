@@ -40,14 +40,14 @@ import org.opentripplanner.api.model.RelativeDirection;
 import org.opentripplanner.api.model.RouterInfo;
 import org.opentripplanner.api.model.RouterList;
 import org.opentripplanner.api.model.WalkStep;
-import org.opentripplanner.api.model.analysis.EdgeSet;
-import org.opentripplanner.api.model.analysis.FeatureCount;
-import org.opentripplanner.api.model.analysis.VertexSet;
-import org.opentripplanner.api.model.json_serializers.WithGraph;
+import org.opentripplanner.api.model.internals.EdgeSet;
+import org.opentripplanner.api.model.internals.FeatureCount;
+import org.opentripplanner.api.model.internals.VertexSet;
 import org.opentripplanner.api.model.patch.PatchResponse;
 import org.opentripplanner.api.model.transit.AgencyList;
 import org.opentripplanner.api.model.transit.ModeList;
 import org.opentripplanner.api.model.transit.RouteData;
+import org.opentripplanner.api.model.transit.RouteDataList;
 import org.opentripplanner.api.model.transit.RouteList;
 import org.opentripplanner.api.model.transit.StopList;
 import org.opentripplanner.api.model.transit.StopTimeList;
@@ -67,6 +67,7 @@ import org.opentripplanner.graph_builder.model.GtfsBundle;
 import org.opentripplanner.graph_builder.model.GtfsBundles;
 import org.opentripplanner.graph_builder.services.GraphBuilderWithGtfsDao;
 import org.opentripplanner.graph_builder.services.shapefile.FeatureSourceFactory;
+import org.opentripplanner.model.json_serialization.WithGraph;
 import org.opentripplanner.routing.algorithm.GenericAStar;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.bike_rental.BikeRentalStationService;
@@ -102,10 +103,6 @@ class SimpleGraphServiceImpl implements GraphService {
     }
 
     @Override
-    public void refreshGraphs() {
-    }
-
-    @Override
     public Graph getGraph() {
         return graphs.get(null);
     }
@@ -116,12 +113,32 @@ class SimpleGraphServiceImpl implements GraphService {
     }
 
     @Override
-    public Collection<String> getGraphIds() {
+    public Collection<String> getRouterIds() {
         return graphs.keySet();
     }
 
     public void putGraph(String graphId, Graph graph) {
         graphs.put(graphId, graph);
+    }
+
+    @Override
+    public boolean registerGraph(String graphId, boolean preEvict) {
+        return false;
+    }
+
+    @Override
+    public boolean registerGraph(String graphId, Graph graph) {
+        return false;
+    }
+
+    @Override
+    public boolean evictGraph(String graphId) {
+        return false;
+    }
+
+    @Override
+    public int evictAll() {
+        return 0;
     }
 
 }
@@ -183,8 +200,8 @@ class Context {
             throw new RuntimeException(e);
         }
 
-        pathService.sptService = new GenericAStar();
-        pathService.graphService = graphService;
+        pathService.setSptService(new GenericAStar());
+        pathService.setGraphService(graphService);
         planGenerator.pathService = pathService;
     }
 
@@ -270,7 +287,7 @@ public class TestRequest extends TestCase {
 
     public void testPlanner() throws Exception {
 
-        Planner planner = new TestPlanner("portland", "113410", "137427");
+        Planner planner = new TestPlanner("portland", "NE 43RD AVE at NE GLISAN ST", "NE 43RD AVE at NE ROYAL CT");
 
         Response response = planner.getItineraries();
         Itinerary itinerary = response.getPlan().itinerary.get(0);
@@ -302,7 +319,7 @@ public class TestRequest extends TestCase {
     public void testAlerts() throws Exception {
 
         // SE 47th and Ash, NE 47th and Davis (note that we cross Burnside, this goes from SE to NE)
-        Planner planner = new TestPlanner("portland", "114789 back", "114237");
+        Planner planner = new TestPlanner("portland", "SE 47TH AVE at SE ASH ST", "NE 47TH AVE at NE COUCH ST");
         Response response = planner.getItineraries();
 
         Itinerary itinerary = response.getPlan().itinerary.get(0);
@@ -322,13 +339,12 @@ public class TestRequest extends TestCase {
 
     public void testIntermediate() throws Exception {
 
-        Graph graph = Context.getInstance().graph;
-        Vertex v1 = graph.getVertex("114080 back");// getVertexByCrossStreets("NW 10TH AVE", "W BURNSIDE ST", false);
-        Vertex v2 = graph.getVertex("115250");// graph.getOutgoing(getVertexByCrossStreets("SE 82ND AVE", "SE ASH ST",
-                                              // false)).iterator().next().getToVertex();
-        Vertex v3 = graph.getVertex("108406");// graph.getOutgoing(getVertexByCrossStreets("NE 21ST AVE", "NE MASON ST",
-                                              // false)).iterator().next().getToVertex();
-        Vertex v4 = graph.getVertex("192532");// getVertexByCrossStreets("SE 92ND AVE", "SE FLAVEL ST", true);
+        Vertex v1 = getVertexByCrossStreets("NW 10TH AVE", "W BURNSIDE ST");
+        Vertex v2 = getVertexByCrossStreets("SE 82ND AVE", "SE ASH ST").getOutgoing().iterator()
+                .next().getToVertex();
+        Vertex v3 = getVertexByCrossStreets("NE 21ST AVE", "NE MASON ST").getOutgoing().iterator()
+                .next().getToVertex();
+        Vertex v4 = getVertexByCrossStreets("SE 92ND AVE", "SE FLAVEL ST");
         Vertex[] vertices = { v1, v3, v2, v4 };
         assertNotNull(v1);
         assertNotNull(v2);
@@ -348,6 +364,15 @@ public class TestRequest extends TestCase {
             }
         }
         assertEquals(4, curVertex); // found all four, in the correct order (1, 3, 2, 4)
+    }
+
+    private Vertex getVertexByCrossStreets(String s1, String s2) {
+        for (Vertex v : Context.getInstance().graph.getVertices()) {
+            if (v.getName().contains(s1) && v.getName().contains(s2)) {
+                return v;
+            }
+        }
+        return null;
     }
 
     public void testBikeRental() {
@@ -423,12 +448,20 @@ public class TestRequest extends TestCase {
         assertEquals(agencyIds.agencies.toArray(new Agency[0])[0].getId(), ("TriMet"));
         assertEquals(1, agencyIds.agencies.size());
 
-        RouteData routeData = (RouteData) index.getRouteData("TriMet", "100", false, false,
+        RouteDataList routeDataList = (RouteDataList) index.getRouteData("TriMet", "100", false, false,
                 routerId);
-        assertEquals(new AgencyAndId("TriMet", "100"), routeData.id);
-        assertTrue(routeData.variants.size() >= 2);
+        assertEquals(new AgencyAndId("TriMet", "100"), routeDataList.routeData.toArray(new RouteData[0])[0].id);
+        assertTrue(routeDataList.routeData.toArray(new RouteData[0])[0].variants.size() >= 2);
 
         RouteList routes = (RouteList) index.getRoutes("TriMet", false, routerId);
+        assertTrue(routes.routes.size() > 50);
+
+        //without agencyId
+        routes = (RouteList) index.getRoutes(null, true, routerId);
+        assertTrue(routes.routes.size() > 50);
+
+        //without agencyId
+        routes = (RouteList) index.getRoutes(null, true, routerId);
         assertTrue(routes.routes.size() > 50);
 
         ModeList modes = (ModeList) index.getModes(routerId);
@@ -436,6 +469,10 @@ public class TestRequest extends TestCase {
         assertFalse(modes.modes.contains(TraverseMode.FUNICULAR));
 
         RouteList routesForStop = (RouteList) index.getRoutesForStop("TriMet", "10579", false,
+                routerId);
+        assertEquals(1, routesForStop.routes.size());
+
+        routesForStop = (RouteList) index.getRoutesForStop(null, "10579", false,
                 routerId);
         assertEquals(1, routesForStop.routes.size());
         // assertEquals("MAX Red Line", routesForStop.routes.get(0).routeLongName);
@@ -447,6 +484,18 @@ public class TestRequest extends TestCase {
         long startTime = TestUtils.dateInSeconds("America/Los_Angeles", 2009, 9, 1, 7, 50, 0) * 1000;
         long endTime = startTime + 60 * 60 * 1000;
         StopTimeList stopTimesForStop = (StopTimeList) index.getStopTimesForStop("TriMet", "10579",
+                startTime, endTime, false, false, null, routerId);
+        assertTrue(stopTimesForStop.stopTimes.size() > 0);
+
+        stopTimesForStop = (StopTimeList) index.getStopTimesForStop(null, "10579",
+                startTime, endTime, false, false, null, routerId);
+        assertTrue(stopTimesForStop.stopTimes.size() > 0);
+
+        stopTimesForStop = (StopTimeList) index.getStopTimesForStop(null, "10579",
+                startTime, endTime, false, false, null, routerId);
+        assertTrue(stopTimesForStop.stopTimes.size() > 0);
+
+        stopTimesForStop = (StopTimeList) index.getStopTimesForStop(null, "10579",
                 startTime, endTime, false, false, null, routerId);
         assertTrue(stopTimesForStop.stopTimes.size() > 0);
 

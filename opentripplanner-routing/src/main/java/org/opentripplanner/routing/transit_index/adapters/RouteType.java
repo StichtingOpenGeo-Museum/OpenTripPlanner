@@ -20,6 +20,8 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Route;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 @XmlRootElement(name = "route")
 public class RouteType {
 
@@ -41,6 +43,7 @@ public class RouteType {
     public RouteType(Route route, Boolean extended) {
         this.id = route.getId();
         this.routeShortName = route.getShortName();
+        this.routeType = route.getType();
         this.routeLongName = route.getLongName();
         if (extended != null && extended.equals(true)) {
             this.routeDesc = route.getDesc();
@@ -50,35 +53,49 @@ public class RouteType {
             this.routeTextColor = route.getTextColor();
         }
     }
+    
+    public AgencyAndId getId(){
+        return this.id;
+    }
 
     @XmlJavaTypeAdapter(AgencyAndIdAdapter.class)
+    @JsonSerialize
     AgencyAndId id;
 
     @XmlJavaTypeAdapter(AgencyAndIdAdapter.class)
+    @JsonSerialize
     AgencyAndId serviceId;
 
     @XmlAttribute
+    @JsonSerialize
     String routeShortName;
 
     @XmlAttribute
+    @JsonSerialize
     String routeLongName;
 
     @XmlAttribute
+    @JsonSerialize
     String routeDesc;
 
     @XmlAttribute
+    @JsonSerialize
     String routeUrl;
 
     @XmlAttribute
+    @JsonSerialize
     String routeColor;
 
     @XmlAttribute
-    int routeType;
+    @JsonSerialize
+    Integer routeType;
 
     @XmlAttribute
+    @JsonSerialize
     String routeTextColor;
 
     @XmlAttribute
-    int routeBikesAllowed;
+    @JsonSerialize
+    Integer routeBikesAllowed;
 
 }

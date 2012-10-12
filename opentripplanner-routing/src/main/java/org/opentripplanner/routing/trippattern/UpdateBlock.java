@@ -3,7 +3,6 @@ package org.opentripplanner.routing.trippattern;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
@@ -97,6 +96,16 @@ public class UpdateBlock {
             }
         }
         return modified;
+    }
+    
+    /** @return true if any of the updates in this block is a cancellation */
+    public boolean isCancellation() {
+        for (Update u : updates) {
+            if (u.status == Update.Status.CANCEL) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 

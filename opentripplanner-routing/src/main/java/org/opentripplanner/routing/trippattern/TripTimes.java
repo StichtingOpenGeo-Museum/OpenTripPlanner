@@ -5,6 +5,7 @@ import java.util.Comparator;
 import lombok.AllArgsConstructor;
 
 import org.onebusaway.gtfs.model.Trip;
+import org.opentripplanner.routing.core.RoutingRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,10 +56,7 @@ public abstract class TripTimes {
     /**
      * It all depends whether we store pointers to the enclosing Timetable in ScheduledTripTimes...
      */
-    public String getHeadsign(int hop) {
-        // implementation should always be the same, referring to enclosing timetable 
-        return "The Headsign";
-    }
+    public abstract String getHeadsign(int hop);
         
     /* IMPLEMENTED INSTANCE METHODS */
     
@@ -90,6 +88,22 @@ public abstract class TripTimes {
     public int getArrivalDelay(int hop) {
         return getArrivalTime(hop) - getScheduledTripTimes().getArrivalTime(hop); 
     }
+    
+    /** 
+     * @return true if this TripTimes represents an unmodified, scheduled trip from a published 
+     * timetable or false if it is a updated, cancelled, or otherwise modified one.
+     */
+    public boolean isScheduled() {
+        return this.getScheduledTripTimes() == this;
+    }
+    
+    private String formatSeconds(int s) {
+        int m = s / 60;
+        s = s % 60;
+        int h = m / 60;
+        m = m % 60;
+        return String.format("%02d:%02d:%02d", h, m, s);
+    }
 
     /** Builds a string concisely representing all departure and arrival times in this TripTimes. */
     public String dumpTimes() {
@@ -98,7 +112,8 @@ public abstract class TripTimes {
         // compaction is multi-layered now
         //sb.append(arrivalTimes == null ? "C " : "U ");
         for (int hop=0; hop < nHops; hop++) {
-            String s = String.format("(%d)%05d__%05d", hop, this.getDepartureTime(hop), this.getArrivalTime(hop));
+            String s = String.format("(%d)%8s__%8s", hop, formatSeconds(this.getDepartureTime(hop)), 
+                    formatSeconds(this.getArrivalTime(hop)));
             sb.append(s);
         }
         return sb.toString();
@@ -197,6 +212,33 @@ public abstract class TripTimes {
         }
         return mid;
     }
+
+    /**
+     * Once a trip has been found departing or arriving at an appropriate time, check whether that 
+     * trip fits other restrictive search criteria such as bicycle and wheelchair accessibility.
+     * 
+     * GTFS bike extensions based on mailing list message at: 
+     * https://groups.google.com/d/msg/gtfs-changes/QqaGOuNmG7o/xyqORy-T4y0J
+     * 2: bikes allowed
+     * 1: no bikes allowed
+     * 0: no information (same as field omitted)
+     * 
+     * If route OR trip explicitly allows bikes, bikes are allowed.
+     */
+    public boolean tripAcceptable(RoutingRequest options, boolean bicycle) {
+        Trip trip = this.getTrip();
+        if (options.bannedTrips.contains(trip.getId()))
+            return false;
+        if (options.wheelchairAccessible && trip.getWheelchairAccessible() != 1)
+            return false;
+        if (bicycle)
+            if ((trip.getTripBikesAllowed() != 2) &&    // trip does not explicitly allow bikes and
+                (trip.getRoute().getBikesAllowed() != 2 // route does not explicitly allow bikes or  
+                || trip.getTripBikesAllowed() == 1))    // trip explicitly forbids bikes
+                return false; 
+        return true;
+    }
+
 
     /* NESTED STATIC CLASSES */
     

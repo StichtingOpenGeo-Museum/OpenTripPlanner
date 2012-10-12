@@ -25,12 +25,13 @@ public class ScheduledTripTimes extends TripTimes implements Serializable {
     
     @Getter private final Trip trip;
 
-    /** 
-     * This is kind of ugly, but the headsigns are in the enclosing pattern not here. Assuming
-     * we have a reference to the enclosing pattern, we can fetch things from there. 
-     * Ideally we can get by without exposing this at all to outside callers.
+    /**
+     * Both trip_headsign and stop_headsign (per stop on a particular trip) are optional GTFS 
+     * fields. If the headsigns array is null, we will report the trip_headsign (which may also
+     * be null) at every stop on the trip. If all the stop_headsigns are the same as the 
+     * trip_headsign we may also set the headsigns array to null to save space.
      */
-    private final int index; 
+    private final String[] headsigns;
     
     /** 
      * The time in seconds after midnight at which the vehicle begins traversing each inter-stop 
@@ -47,9 +48,8 @@ public class ScheduledTripTimes extends TripTimes implements Serializable {
     private int[] arrivalTimes; 
 
     /** The provided stopTimes are assumed to be pre-filtered, valid, and monotonically increasing. */ 
-    public ScheduledTripTimes(Trip trip, int index, List<StopTime> stopTimes) {
+    public ScheduledTripTimes(Trip trip, List<StopTime> stopTimes) {
         this.trip = trip;
-        this.index = index;
         int nStops = stopTimes.size();
         int nHops = nStops - 1;
         departureTimes = new int[nHops];
@@ -59,8 +59,45 @@ public class ScheduledTripTimes extends TripTimes implements Serializable {
             departureTimes[hop] = stopTimes.get(hop).getDepartureTime();
             arrivalTimes[hop] = stopTimes.get(hop + 1).getArrivalTime();
         }
+        this.headsigns = makeHeadsignsArray(stopTimes);
         // If all dwell times are 0, arrival times array is not needed. Attempt to save some memory.
         this.compact();
+    }
+    
+    /** 
+     * @return either an array of headsigns (one for each stop on this trip) or null if the 
+     * headsign is the same at all stops (including null) and can be found in the Trip object. 
+     */
+    private String[] makeHeadsignsArray(List<StopTime> stopTimes) {
+        String tripHeadsign = trip.getTripHeadsign();
+        boolean useStopHeadsigns = false;
+        if (tripHeadsign == null) {
+            useStopHeadsigns = true;
+        }
+        else {
+            for (StopTime st : stopTimes) {
+                if ( ! (tripHeadsign.equals(st.getStopHeadsign()))) {
+                    useStopHeadsigns = true;
+                    break;
+                }
+            }
+        }
+        if ( ! useStopHeadsigns) { 
+            return null; //defer to trip_headsign
+        }
+        boolean allNull = true;
+        int i = 0;
+        String[] hs = new String[stopTimes.size()];
+        for (StopTime st : stopTimes) {
+            String headsign = st.getStopHeadsign();
+            hs[i++] = headsign;
+            if (headsign != null)
+                allNull = false;
+        }
+        if (allNull)
+            return null;
+        else
+            return hs;
     }
     
     @Override
@@ -127,10 +164,12 @@ public class ScheduledTripTimes extends TripTimes implements Serializable {
         return "ScheduledTripTimes\n" + dumpTimes();
     }
     
-    // TODO this is going to require pointers to the enclosing Timetable
     @Override
     public String getHeadsign(int hop) {
-        return "Headsign";
+        if (headsigns == null)
+            return trip.getTripHeadsign();
+        else
+            return headsigns[hop];
     }
 
 }

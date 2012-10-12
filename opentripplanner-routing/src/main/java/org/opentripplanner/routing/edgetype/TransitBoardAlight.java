@@ -16,7 +16,6 @@ package org.opentripplanner.routing.edgetype;
 import org.onebusaway.gtfs.model.Route;
 import org.onebusaway.gtfs.model.Trip;
 import org.opentripplanner.gtfs.GtfsLibrary;
-import org.opentripplanner.routing.core.EdgeNarrative;
 import org.opentripplanner.routing.core.RouteSpec;
 import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.core.ServiceDay;
@@ -31,8 +30,10 @@ import org.opentripplanner.routing.vertextype.TransitStopArrive;
 import org.opentripplanner.routing.vertextype.TransitStopDepart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.vividsolutions.jts.geom.LineString;
+
 import lombok.Getter;
-import com.vividsolutions.jts.geom.Geometry;
 
 
 /**
@@ -94,7 +95,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
         return 0;
     }
 
-    public Geometry getGeometry() {
+    public LineString getGeometry() {
         return null;
     }
 
@@ -117,7 +118,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
         RoutingRequest options = state0.getOptions();
         // this method is on State not RoutingRequest because we care whether the user is in
         // possession of a rented bike.
-        TraverseMode mode = state0.getNonTransitMode(options); 
+        TraverseMode mode = state0.getNonTransitMode();
 
         // figure out the direction
         // it's leaving transit iff it's a boarding and is arrive by, or it's not a boarding and
@@ -134,8 +135,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
             if (state0.getBackEdge() instanceof TransitBoardAlight) {
                 return null;
             }
-            EdgeNarrative en = new TransitNarrative(state0.getTripTimes().getTrip(), this);
-            StateEditor s1 = state0.edit(this, en);
+            StateEditor s1 = state0.edit(this);
             
             if (boarding)
                 type = getPattern().getBoardType(stopIndex);
@@ -185,6 +185,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
                 }
             }            
 
+            s1.setBackMode(getMode());
             return s1.makeState();
         } else {
             /* onto transit: look for a transit trip on this pattern */
@@ -206,6 +207,9 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
             int bestWait = -1;
             TripTimes bestTripTimes = null;
             int serviceId = getPattern().getServiceId();
+            // this method is on State not RoutingRequest because we care whether the user is in
+            // possession of a rented bike.
+            ServiceDay serviceDay = null;
             for (ServiceDay sd : rctx.serviceDays) {
                 int secondsSinceMidnight = sd.secondsSinceMidnight(current_time);
                 // only check for service on days that are not in the future
@@ -226,13 +230,9 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
                 //    continue;
                 if (sd.serviceIdRunning(serviceId)) {
                     
-                    // make sure we search for boards on board and alights on alight
-                    if (boarding)
-                        tripTimes = getPattern().getNextTrip(stopIndex, 
-                                secondsSinceMidnight, mode == TraverseMode.BICYCLE, options);
-                    else
-                        tripTimes = getPattern().getPreviousTrip(stopIndex, 
-                                secondsSinceMidnight, mode == TraverseMode.BICYCLE, options);
+                    // getNextTrip will find next or prev departure depending on final boolean parameter
+                    tripTimes = getPattern().getNextTrip(stopIndex, secondsSinceMidnight, 
+                            mode == TraverseMode.BICYCLE, options, boarding);
                     
                     if (tripTimes != null) {
                         // a trip was found, index is valid, wait will be non-negative
@@ -249,6 +249,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
                         if (bestWait < 0 || wait < bestWait) {
                             // track the soonest departure over all relevant schedules
                             bestWait = wait;
+                            serviceDay = sd;
                             bestTripTimes = tripTimes;
                         }
                     }
@@ -290,8 +291,8 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
                 }
             }
 
-            EdgeNarrative en = new TransitNarrative(trip, this);
-            StateEditor s1 = state0.edit(this, en);
+            StateEditor s1 = state0.edit(this);
+            s1.setBackMode(getMode());
             
             if (boarding)
                 type = getPattern().getBoardType(stopIndex);
@@ -301,8 +302,9 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
             if (TransitUtils.handleBoardAlightType(s1, type)) {
                 return null;
             }
+            s1.setServiceDay(serviceDay);
             // save the trip times to ensure that router has a consistent view of them 
-            s1.setTripTimes(bestTripTimes); 
+            s1.setTripTimes(bestTripTimes);
             s1.incrementTimeInSeconds(bestWait);
             s1.incrementNumBoardings();
             s1.setTripId(trip.getId());
@@ -351,6 +353,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
     public State optimisticTraverse(State state0) {
         StateEditor s1 = state0.edit(this);
         // no cost (see patternalight)
+        s1.setBackMode(getMode());
         return s1.makeState();
     }
 
@@ -384,7 +387,7 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
             return options.getBoardCostLowerBound();
     }
 
-    
+    @Override
     public int getStopIndex() {
         return stopIndex;
     }
@@ -394,4 +397,5 @@ public class TransitBoardAlight extends PatternEdge implements OnBoardForwardEdg
                 (boarding ? "boarding " : "alighting ") +
                 getFromVertex() + " to " + getToVertex() + ")";
     }
+
 }

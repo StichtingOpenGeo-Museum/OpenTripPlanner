@@ -21,6 +21,8 @@ import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Route;
 import org.onebusaway.gtfs.model.Trip;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 @XmlRootElement(name = "trip")
 public class TripType {
 
@@ -58,33 +60,43 @@ public class TripType {
     }
 
     @XmlJavaTypeAdapter(AgencyAndIdAdapter.class)
+    @JsonSerialize
     AgencyAndId id;
 
     @XmlJavaTypeAdapter(AgencyAndIdAdapter.class)
+    @JsonSerialize
     AgencyAndId serviceId;
 
     @XmlAttribute
+    @JsonSerialize
     String tripShortName;
 
     @XmlAttribute
+    @JsonSerialize
     String tripHeadsign;
 
     @XmlJavaTypeAdapter(AgencyAndIdAdapter.class)
+    @JsonSerialize
     AgencyAndId routeId;
 
     @XmlAttribute
+    @JsonSerialize
     String directionId;
 
     @XmlAttribute
+    @JsonSerialize
     String blockId;
 
     @XmlJavaTypeAdapter(AgencyAndIdAdapter.class)
+    @JsonSerialize
     AgencyAndId shapeId;
 
     @XmlAttribute
+    @JsonSerialize
     Integer wheelchairAccessible;
 
     @XmlAttribute
+    @JsonSerialize
     Integer tripBikesAllowed;
 
     Route route;

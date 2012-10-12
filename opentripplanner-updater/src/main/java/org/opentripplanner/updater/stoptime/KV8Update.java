@@ -26,7 +26,9 @@ public class KV8Update extends Update {
     public static List<Update> fromCTX(CTX ctx) {
         //LOG.trace(ctxString);
         // at this point, updates may have mixed trip IDs, dates, etc.
-        List<Update> ret = new ArrayList<Update>(); 
+        List<Update> ret = new ArrayList<Update>();
+        if (!"DATEDPASSTIME".equals(ctx.type))
+            return ret; 
         for (int i = 0; i < ctx.rows.size(); i++) {
             HashMap<String, String> row = ctx.rows.get(i);
             // there was a field in the CTX all along that indicated the extra non-passenger stops...

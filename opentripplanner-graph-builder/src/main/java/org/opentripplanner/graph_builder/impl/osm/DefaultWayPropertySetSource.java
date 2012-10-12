@@ -488,6 +488,7 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
         createNames(props, "highway=platform", "platform");
         createNames(props, "railway=platform", "platform");
         createNames(props, "railway=platform;highway=footway;bicycle=no", "platform");
+        createNames(props, "public_transport=platform", "platform");
 
         // Bridges/Tunnels
         createNames(props, "highway=pedestrian;bridge=*", "footbridge");
@@ -519,7 +520,7 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
         createNames(props, "highway=service;service=parking_aisle", "parking aisle");
         createNames(props, "highway=byway", "byway");
         createNames(props, "highway=track", "track");
-
+	
         createNames(props, "highway=footway;footway=sidewalk", "sidewalk");
         createNames(props, "highway=path;path=sidewalk", "sidewalk");
 
@@ -530,6 +531,7 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
 
         //slope overrides
         props.setSlopeOverride(new OSMSpecifier("bridge=*"), true);
+        props.setSlopeOverride(new OSMSpecifier("embankment=*"), true);
         props.setSlopeOverride(new OSMSpecifier("tunnel=*"), true);
 
         return props;
