@@ -392,10 +392,6 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         out.defaultWriteObject();
     }
 
-    public boolean getSlopeOverride() {
-        return elevationProfileSegment.getSlopeOverride();
-    }
-
     public void setId(String id) {
         this.id = id;
     }
@@ -427,7 +423,7 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
     
     @Override
     public String toString() {
-        return "PlainStreetEdge(" + fromv + " -> " + tov + ")";
+        return "PlainStreetEdge(" + name + ", " + fromv + " -> " + tov + ")";
     }
 
     public boolean hasBogusName() {

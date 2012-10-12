@@ -487,6 +487,7 @@ public class DutchWayPropertySetSource implements WayPropertySetSource {
         createNames(props, "highway=platform", "perron");
         createNames(props, "railway=platform", "perron");
         createNames(props, "railway=platform;highway=footway;bicycle=no", "perron");
+        createNames(props, "public_transport=platform", "perron");
 
         // Bridges/Tunnels
         createNames(props, "highway=pedestrian;bridge=*", "voetgangersbrug");
