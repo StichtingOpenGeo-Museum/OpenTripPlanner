@@ -204,10 +204,10 @@ public class PlanGenerator {
                     int delay = tt.getDepartureDelay(hop);
                     String d = "op tijd";
                     if (Math.abs(delay) > 10) {
-                        d = String.format("%2.1f min %s", delay / 60.0, 
+                        d = String.format("%2f min %s", delay / 60.0, 
                                 (delay < 0) ? "vervroegd" : "vertraagd");
                     }
-                    d = "Met behulp van real-time reisinformatie: ".concat(d);
+                    d = "Real-time reisinformatie: ".concat(d);
                     leg.addAlert(Alert.createSimpleAlerts(d));
                     LOG.info(d);
                 }else{
