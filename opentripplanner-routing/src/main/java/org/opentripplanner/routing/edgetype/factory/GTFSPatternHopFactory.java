@@ -442,6 +442,14 @@ public class GTFSPatternHopFactory {
             List<Frequency> frequencies = tripFrequencies.get(trip);
             if(frequencies != null) {
                 // before creating frequency-based trips, check for single-instance frequencies.
+                Collections.sort(frequencies, new Comparator<Frequency>() {
+
+                    @Override
+                    public int compare(Frequency o1, Frequency o2) {
+                        return o1.getStartTime() - o2.getStartTime();
+                    }
+                });
+
                 Frequency frequency = frequencies.get(0);
                 if (frequencies.size() > 1 || 
                     frequency.getStartTime() != stopTimes.get(0).getDepartureTime() ||
@@ -972,11 +980,11 @@ public class GTFSPatternHopFactory {
             
             if (stop.getLocationType() != 2) {
                 //add a vertex representing arriving at the stop
-                TransitStopArrive arrive = new TransitStopArrive(graph, stop);
+                TransitStopArrive arrive = new TransitStopArrive(graph, stop, stopVertex);
                 context.stopArriveNodes.put(stop, arrive);
 
                 //add a vertex representing departing from the stop
-                TransitStopDepart depart = new TransitStopDepart(graph, stop);
+                TransitStopDepart depart = new TransitStopDepart(graph, stop, stopVertex);
                 context.stopDepartNodes.put(stop, depart);
 
                 //add edges from arrive to stop and stop to depart
@@ -1145,6 +1153,7 @@ public class GTFSPatternHopFactory {
                     _log.warn(graph.addBuilderAnnotation(new StopAtEntrance(st1, true)));
                 }
             }
+            stopArrive.getStopVertex().addMode(mode);
             new TransitBoardAlight(stopDepart, psv0depart, hopIndex, mode);
             new TransitBoardAlight(psv1arrive, stopArrive, hopIndex, mode);
         }        
