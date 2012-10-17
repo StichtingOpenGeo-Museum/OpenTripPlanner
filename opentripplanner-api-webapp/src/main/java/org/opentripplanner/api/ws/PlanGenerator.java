@@ -195,7 +195,7 @@ public class PlanGenerator {
                 continue;
             }
 
-// debug: push vehicle late status out to UI
+	    // debug: push vehicle late status out to UI
             if (backEdge instanceof PatternHop) {
                 TripTimes tt = state.getTripTimes();
                 int hop = ((PatternHop)backEdge).stopIndex;
@@ -203,16 +203,15 @@ public class PlanGenerator {
                 if ( ! tt.isScheduled()) {
                     int delay = tt.getDepartureDelay(hop);
                     String d = "op tijd";
-                    if (Math.abs(delay) > 10) {
-                        d = String.format("%2f min %s", delay / 60.0, 
+		    int delayMin = Math.abs(delay % 60);
+                    if (Math.abs(delay) > 60) {
+                        d = String.format("%d min %s", delayMin, 
                                 (delay < 0) ? "vervroegd" : "vertraagd");
                     }
                     d = "Real-time reisinformatie: ".concat(d);
                     leg.addAlert(Alert.createSimpleAlerts(d));
                     LOG.info(d);
-                }else{
-		    LOG.info("sched");
-		} 
+		}
             }
 
             TraverseMode mode = state.getBackMode();
