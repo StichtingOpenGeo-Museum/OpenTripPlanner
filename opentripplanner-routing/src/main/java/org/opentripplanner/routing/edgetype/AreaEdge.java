@@ -11,8 +11,8 @@ public class AreaEdge extends PlainStreetEdge {
     public AreaEdge(IntersectionVertex startEndpoint,
             IntersectionVertex endEndpoint, LineString geometry, String name,
             double length, StreetTraversalPermission permissions, boolean back,
-            AreaEdgeList area) {
-        super(startEndpoint, endEndpoint, geometry, name, length, permissions, back);
+            float carSpeed, AreaEdgeList area) {
+        super(startEndpoint, endEndpoint, geometry, name, length, permissions, back, carSpeed);
         this.area = area;
         area.addEdge(this);
     }

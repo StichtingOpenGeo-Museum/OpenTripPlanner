@@ -24,13 +24,14 @@ import org.opentripplanner.common.TurnRestriction;
 import org.opentripplanner.common.TurnRestrictionType;
 import org.opentripplanner.common.geometry.DirectionUtils;
 import org.opentripplanner.common.geometry.PackedCoordinateSequence;
+import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.StateEditor;
 import org.opentripplanner.routing.core.TraverseMode;
-import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.patch.Alert;
 import org.opentripplanner.routing.util.ElevationProfileSegment;
+import org.opentripplanner.routing.vertextype.IntersectionVertex;
 import org.opentripplanner.routing.vertextype.StreetVertex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +40,7 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.LineString;
 
 /**
- * This represents a street segment. This is unusual in an edge-based graph, but happens when we
- * have to split a set of turns to accommodate a transit stop.
+ * This represents a street segment.
  * 
  * @author novalis
  * 
@@ -83,6 +83,12 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
      * This street is a staircase
      */
     private boolean stairs;
+    
+    /** The speed in meters per second that an automobile can traverse this street segment at */
+    private float carSpeed;
+    
+    /** This street has a toll */
+    private boolean toll;
 
     private Set<Alert> wheelchairNotes;
 
@@ -100,11 +106,18 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         super(null, null);
     }
 
+    public PlainStreetEdge(StreetVertex v1, StreetVertex v2, LineString geometry, 
+            String name, double length,
+            StreetTraversalPermission permission, boolean back) {
+        // use a default car speed of ~25 mph for splitter vertices and the like
+        this(v1, v2, geometry, name, length, permission, back, 11.2f);
+    }
+    
     // Presently, we have plainstreetedges that connect both IntersectionVertexes and
     // TurnVertexes
     public PlainStreetEdge(StreetVertex v1, StreetVertex v2, LineString geometry, 
             String name, double length,
-            StreetTraversalPermission permission, boolean back) {
+            StreetTraversalPermission permission, boolean back, float carSpeed) {
         super(v1, v2);
         this.geometry = geometry;
         this.length = length;
@@ -112,6 +125,7 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         this.name = name;
         this.permission = permission;
         this.back = back;
+        this.carSpeed = carSpeed;
         if (geometry != null) {
             try {
                 for (Coordinate c : geometry.getCoordinates()) {
@@ -227,7 +241,15 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
             }
             return null;
         }
-        double speed = options.getSpeed(traverseMode);
+        
+        double speed;
+        
+        // Automobiles have variable speeds depending on the edge type
+        if (traverseMode == TraverseMode.CAR)
+            speed = this.calculateCarSpeed(options);
+        else
+            speed = options.getSpeed(traverseMode);
+         
         double time = length / speed;
         double weight;
         if (options.wheelchairAccessible) {
@@ -287,9 +309,11 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         PlainStreetEdge backPSE;
         if (backEdge != null && backEdge instanceof PlainStreetEdge) {
             backPSE = (PlainStreetEdge) backEdge;
-            int outAngle = 0;
-            int inAngle = 0;
-
+            float backSpeed = (float) (traverseMode == TraverseMode.CAR ? backPSE.getCarSpeed() :
+                options.getSpeed(traverseMode));
+            
+            final double realTurnCost;
+            
             /*
              * This is a subtle piece of code. Turn costs are evaluated differently during
              * forward and reverse traversal. During forward traversal of an edge, the turn
@@ -301,47 +325,65 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
              * that during reverse traversal, we must also use the speed for the mode of
              * the backEdge, rather than of the current edge.
              */
-
-            double turnSpeed = speed;
-            if (options.arriveBy) {
-                if (!canTurnOnto(backPSE, traverseMode))
-                    return null;
-                outAngle = getOutAngle();
-                inAngle = backPSE.getInAngle();
-                turnSpeed = options.getSpeed(s0.getBackMode());
-            } else {
-                if (!backPSE.canTurnOnto(this, traverseMode))
-                    return null;
-                outAngle = backPSE.getOutAngle();
-                inAngle = getInAngle();
+            if (fromv instanceof IntersectionVertex) {
+                if (options.arriveBy) {
+                    if (!canTurnOnto(backPSE, s0, traverseMode))
+                        return null;
+    
+                    realTurnCost = ((IntersectionVertex) tov).computeTraversalCost(
+                            this, backPSE, traverseMode, options, (float) speed, backSpeed);
+                } else {
+                    if (!backPSE.canTurnOnto(this, s0, traverseMode))
+                        return null;
+                    realTurnCost = ((IntersectionVertex) fromv).computeTraversalCost(
+                            backPSE, this, traverseMode, options, backSpeed, (float) speed);
+                }
             }
-
-            int turnCost = Math.abs(outAngle - inAngle);
-            if (turnCost > 180) {
-                turnCost = 360 - turnCost;
+            else {
+                LOG.warn("PlainStreetEdge originating from non-IntersectionVertex: {}, " +
+                		"setting turn cost to 0", fromv);
+                realTurnCost = 0;
             }
-            final double realTurnCost = (turnCost / 20.0) / turnSpeed;
-            s1.incrementWalkDistance(realTurnCost / 100); //just a tie-breaker
+                       
+            if (traverseMode != TraverseMode.CAR) 
+                s1.incrementWalkDistance(realTurnCost / 100); //just a tie-breaker
+
             weight += realTurnCost;
-            int turnTime = (int) realTurnCost;
+            long turnTime = (long) realTurnCost;
             if (turnTime != realTurnCost) {
                 turnTime++;
             }
-            s1.incrementTimeInSeconds(turnTime);
+            time += turnTime;
         }
+
         s1.incrementWalkDistance(length);
         int timeLong = (int) time;
         if (timeLong != time) {
             timeLong++;
         }
         s1.incrementTimeInSeconds(timeLong);
+        
+        if (traverseMode != TraverseMode.CAR)
+            s1.incrementWalkDistance(length);
+
         s1.incrementWeight(weight);
         if (s1.weHaveWalkedTooFar(options))
             return null;
         
         s1.addAlerts(notes);
+        
+        if (this.toll && traverseMode == TraverseMode.CAR)
+            s1.addAlert(Alert.createSimpleAlerts("Toll road"));
 
         return s1.makeState();
+    }
+
+    /**
+     * Calculate the average automobile traversal speed of this segment, given the RoutingRequest,
+     * and return it in meters per second.
+     */
+    private double calculateCarSpeed(RoutingRequest options) {
+        return this.carSpeed;
     }
 
     @Override
@@ -505,17 +547,19 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         return turnRestrictions;
     }
 
-    public boolean canTurnOnto(Edge e, TraverseMode mode) {
+    public boolean canTurnOnto(Edge e, State state, TraverseMode mode) {
         for (TurnRestriction restriction : turnRestrictions) {
             /* FIXME: This is wrong for trips that end in the middle of restriction.to
              */
 
             if (restriction.type == TurnRestrictionType.ONLY_TURN) {
-                if (restriction.to != e && restriction.modes.contains(mode)) {
+                if (restriction.to != e && restriction.modes.contains(mode) &&
+                        restriction.active(state.getTime())) {
                     return false;
                 }
             } else {
-                if (restriction.to == e && restriction.modes.contains(mode)) {
+                if (restriction.to == e && restriction.modes.contains(mode) &&
+                        restriction.active(state.getTime())) {
                     return false;
                 }
             }
@@ -534,5 +578,21 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
     @Override
     public ElevationProfileSegment getElevationProfileSegment() {
         return elevationProfileSegment;
+    }
+
+    public void setCarSpeed(float carSpeed) {
+        this.carSpeed = carSpeed;         
+    }
+    
+    public float getCarSpeed() {
+        return carSpeed;
+    }
+    
+    public void setToll(boolean toll) {
+        this.toll = toll;
+    }
+    
+    public boolean getToll() {
+        return this.toll;
     }
 }

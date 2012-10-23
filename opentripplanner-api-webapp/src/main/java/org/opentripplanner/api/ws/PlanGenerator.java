@@ -45,7 +45,6 @@ import org.opentripplanner.routing.edgetype.ElevatorEdge;
 import org.opentripplanner.routing.edgetype.FreeEdge;
 import org.opentripplanner.routing.edgetype.HopEdge;
 import org.opentripplanner.routing.edgetype.LegSwitchingEdge;
-import org.opentripplanner.routing.edgetype.PlainStreetEdge;
 import org.opentripplanner.routing.edgetype.PreAlightEdge;
 import org.opentripplanner.routing.edgetype.PreBoardEdge;
 import org.opentripplanner.routing.edgetype.StreetEdge;
@@ -63,6 +62,7 @@ import org.opentripplanner.routing.services.PathService;
 import org.opentripplanner.routing.services.TransitIndexService;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.trippattern.TripTimes;
+import org.opentripplanner.routing.vertextype.ExitVertex;
 import org.opentripplanner.routing.vertextype.TransitVertex;
 import org.opentripplanner.util.PolylineEncoder;
 import org.slf4j.Logger;
@@ -733,7 +733,9 @@ public class PlanGenerator {
             } else if (((step.streetName != null && !step.streetNameNoParens().equals(streetNameNoParens))
                     && (!step.bogusName || !edge.hasBogusName())) ||
                     // if we are on a roundabout now and weren't before, start a new step
-                    edge.isRoundabout() != (roundaboutExit > 0)) {
+                    edge.isRoundabout() != (roundaboutExit > 0) ||
+                    isLink(edge) && !isLink(backState.getBackEdge())
+                    ) {
                 /* street name has changed, or we've changed state from a roundabout to a street */
                 if (roundaboutExit > 0) {
                     // if we were just on a roundabout,
@@ -744,6 +746,9 @@ public class PlanGenerator {
                     }
                     // localization
                     roundaboutExit = 0;
+                }
+                if (backState.getVertex() instanceof ExitVertex) {
+                    step.exit = ((ExitVertex) backState.getVertex()).getExitName();
                 }
                 /* start a new step */
                 step = createWalkStep(currState);
@@ -787,47 +792,18 @@ public class PlanGenerator {
                     // intersection
                     // to see if we should generate a "left to continue" instruction.
                     boolean shouldGenerateContinue = false;
-                    if (edge instanceof PlainStreetEdge) {
-                        // the next edges will be PlainStreetEdges, we hope
-                        double angleDiff = getAbsoluteAngleDiff(thisAngle, lastAngle);
-                        for (Edge alternative : backState.getVertex().getOutgoingStreetEdges()) {
-                            if (alternative.getName().equals(streetName)) {
-                                // alternatives that have the same name
-                                // are usually caused by street splits
-                                continue;
-                            }
-                            double altAngle = DirectionUtils.getFirstAngle(alternative
-                                    .getGeometry());
-                            double altAngleDiff = getAbsoluteAngleDiff(altAngle, lastAngle);
-                            if (angleDiff > Math.PI / 4 || altAngleDiff - angleDiff < Math.PI / 16) {
-                                shouldGenerateContinue = true;
-                                break;
-                            }
+                    double angleDiff = getAbsoluteAngleDiff(thisAngle, lastAngle);
+                    for (Edge alternative : backState.getVertex().getOutgoingStreetEdges()) {
+                        if (alternative.getName().equals(streetName)) {
+                            // alternatives that have the same name
+                            // are usually caused by street splits
+                            continue;
                         }
-                    } else {
-                        double angleDiff = getAbsoluteAngleDiff(lastAngle, thisAngle);
-                        // FIXME: this code might be wrong with the removal of the edge-based graph
-                        State twoStatesBack = backState.getBackState();
-                        Vertex backVertex = twoStatesBack.getVertex();
-                        for (Edge alternative : backVertex.getOutgoingStreetEdges()) {
-                            List<Edge> alternatives = alternative.getToVertex()
-                                    .getOutgoingStreetEdges();
-                            if (alternatives.size() == 0) {
-                                continue; // this is not an alternative
-                            }
-                            alternative = alternatives.get(0);
-                            if (alternative.getName().equals(streetName)) {
-                                // alternatives that have the same name
-                                // are usually caused by street splits
-                                continue;
-                            }
-                            double altAngle = DirectionUtils.getFirstAngle(alternative
-                                    .getGeometry());
-                            double altAngleDiff = getAbsoluteAngleDiff(altAngle, lastAngle);
-                            if (angleDiff > Math.PI / 4 || altAngleDiff - angleDiff < Math.PI / 16) {
-                                shouldGenerateContinue = true;
-                                break;
-                            }
+                        double altAngle = DirectionUtils.getFirstAngle(alternative.getGeometry());
+                        double altAngleDiff = getAbsoluteAngleDiff(altAngle, lastAngle);
+                        if (angleDiff > Math.PI / 4 || altAngleDiff - angleDiff < Math.PI / 16) {
+                            shouldGenerateContinue = true;
+                            break;
                         }
                     }
 
@@ -854,18 +830,48 @@ public class PlanGenerator {
 
                     if (twoBack.distance < MAX_ZAG_DISTANCE
                             && lastStep.streetNameNoParens().equals(threeBack.streetNameNoParens())) {
-                        // total hack to remove zags.
-                        steps.remove(last);
-                        steps.remove(last - 1);
-                        step = threeBack;
-                        step.distance += twoBack.distance;
-                        distance += step.distance;
-                        if (twoBack.elevation != null) {
-                            if (step.elevation == null) {
-                                step.elevation = twoBack.elevation;
-                            } else {
-                                for (P2<Double> d : twoBack.elevation) {
-                                    step.elevation.add(new P2<Double>(d.getFirst() + step.distance, d.getSecond()));
+                        
+                        if (((lastStep.relativeDirection == RelativeDirection.RIGHT || 
+                                lastStep.relativeDirection == RelativeDirection.HARD_RIGHT) &&
+                                (twoBack.relativeDirection == RelativeDirection.RIGHT ||
+                                twoBack.relativeDirection == RelativeDirection.HARD_RIGHT)) ||
+                                ((lastStep.relativeDirection == RelativeDirection.LEFT || 
+                                lastStep.relativeDirection == RelativeDirection.HARD_LEFT) &&
+                                (twoBack.relativeDirection == RelativeDirection.LEFT ||
+                                twoBack.relativeDirection == RelativeDirection.HARD_LEFT))) {
+                            // in this case, we have two left turns or two right turns in quick 
+                            // succession; this is probably a U-turn.
+                            
+                            steps.remove(last - 1);
+                            
+                            lastStep.distance += twoBack.distance;
+                            
+                            // A U-turn to the left, typical in the US. 
+                            if (lastStep.relativeDirection == RelativeDirection.LEFT || 
+                                    lastStep.relativeDirection == RelativeDirection.HARD_LEFT)
+                                lastStep.relativeDirection = RelativeDirection.UTURN_LEFT;
+                            else
+                                lastStep.relativeDirection = RelativeDirection.UTURN_RIGHT;
+                            
+                            // in this case, we're definitely staying on the same street 
+                            // (since it's zag removal, the street names are the same)
+                            lastStep.stayOn = true;
+                        }
+                                
+                        else {
+                            // total hack to remove zags.
+                            steps.remove(last);
+                            steps.remove(last - 1);
+                            step = threeBack;
+                            step.distance += twoBack.distance;
+                            distance += step.distance;
+                            if (twoBack.elevation != null) {
+                                if (step.elevation == null) {
+                                    step.elevation = twoBack.elevation;
+                                } else {
+                                    for (P2<Double> d : twoBack.elevation) {
+                                        step.elevation.add(new P2<Double>(d.getFirst() + step.distance, d.getSecond()));
+                                    }
                                 }
                             }
                         }
@@ -890,6 +896,10 @@ public class PlanGenerator {
             lastAngle = DirectionUtils.getLastAngle(geom);
         }
         return steps;
+    }
+
+    private boolean isLink(Edge edge) {
+        return (((StreetEdge)edge).getStreetClass() & StreetEdge.CLASS_LINK) == StreetEdge.CLASS_LINK;
     }
 
     private double getAbsoluteAngleDiff(double thisAngle, double lastAngle) {

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.opentripplanner.common.RepeatingTimePeriod;
 import org.opentripplanner.common.TurnRestriction;
 import org.opentripplanner.common.TurnRestrictionType;
 import org.opentripplanner.common.geometry.DistanceLibrary;
@@ -34,6 +35,8 @@ import org.opentripplanner.common.model.P2;
 import org.opentripplanner.gbannotation.ConflictingBikeTags;
 import org.opentripplanner.gbannotation.Graphwide;
 import org.opentripplanner.gbannotation.LevelAmbiguous;
+import org.opentripplanner.gbannotation.StreetCarSpeedZero;
+import org.opentripplanner.gbannotation.TripDegenerate;
 import org.opentripplanner.gbannotation.TurnRestrictionBad;
 import org.opentripplanner.gbannotation.TurnRestrictionException;
 import org.opentripplanner.gbannotation.TurnRestrictionUnknown;
@@ -78,6 +81,7 @@ import org.opentripplanner.routing.util.ElevationUtils;
 import org.opentripplanner.routing.vertextype.BikeRentalStationVertex;
 import org.opentripplanner.routing.vertextype.ElevatorOffboardVertex;
 import org.opentripplanner.routing.vertextype.ElevatorOnboardVertex;
+import org.opentripplanner.routing.vertextype.ExitVertex;
 import org.opentripplanner.routing.vertextype.IntersectionVertex;
 import org.opentripplanner.util.MapUtils;
 import org.opentripplanner.visibility.Environment;
@@ -107,6 +111,8 @@ class TurnRestrictionTag {
     TurnRestrictionType type;
 
     Direction direction;
+
+    RepeatingTimePeriod time;    
 
     public List<PlainStreetEdge> possibleFrom = new ArrayList<PlainStreetEdge>();
 
@@ -568,6 +574,7 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                             restriction.to = to;
                             restriction.type = restrictionTag.type;
                             restriction.modes = restrictionTag.modes;
+                            restriction.time = restrictionTag.time;
                             from.addTurnRestriction(restriction);
                         }
                     }
@@ -623,6 +630,8 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                 Set<Edge> edges = new HashSet<Edge>();
 
                 OSMWithTags areaEntity = area.parent;
+                // forward and reverse are not well defined for areas, so assume forward
+                float carSpeed = wayPropertySet.getCarSpeedForWay(areaEntity, false);
 
                 StreetTraversalPermission areaPermissions = getPermissionsForEntity(areaEntity,
                         StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE);
@@ -767,11 +776,12 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
 
                                 double length = distanceLibrary.distance(
                                         startEndpoint.getCoordinate(), endEndpoint.getCoordinate());
+
                                 AreaEdge street = edgeFactory.createAreaEdge(nodeI, nodeJ,
                                         areaEntity, startEndpoint, endEndpoint, geometry, name,
-                                        length, areaPermissions, i > j, edgeList);
+                                        length, areaPermissions, i > j, carSpeed, edgeList);
                                 int cls = StreetEdge.CLASS_OTHERPATH;
-                                cls |= getPlatformClass(areaEntity);
+                                cls |= getStreetClasses(areaEntity);
                                 street.setStreetClass(cls);
                                 street.setId(id);
 
@@ -1605,6 +1615,15 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                 return;
             }
             tag.modes = new TraverseModeSet(modes);
+            
+            // set the time periods for this restriction, if applicable
+            if (relation.hasTag("day_on") && relation.hasTag("day_off") && 
+                    relation.hasTag("hour_on") && relation.hasTag("hour_off")) {
+                
+                tag.time = RepeatingTimePeriod.parseFromOsmTurnRestriction(
+                        relation.getTag("day_on"), relation.getTag("day_off"), 
+                        relation.getTag("hour_on"), relation.getTag("hour_off"));
+            }
 
             MapUtils.addToMapList(turnRestrictionsByFromWay, from, tag);
             MapUtils.addToMapList(turnRestrictionsByToWay, to, tag);
@@ -1835,9 +1854,11 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                 length *= 2;
             }
 
+            float carSpeed = wayPropertySet.getCarSpeedForWay(way, back);
+            
             PlainStreetEdge street = edgeFactory
                     .createEdge(_nodes.get(startNode), _nodes.get(endNode), way, start, end,
-                            geometry, name, length, permissions, back);
+                            geometry, name, length, permissions, back, carSpeed);
             street.setId(id);
 
             String highway = way.getTag("highway");
@@ -1856,13 +1877,18 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
                 cls = StreetEdge.CLASS_OTHERPATH;
             }
 
-            cls |= getPlatformClass(way);
+            cls |= getStreetClasses(way);
             street.setStreetClass(cls);
 
-            if (!way.hasTag("name")) {
+            if (!way.hasTag("name") && !way.hasTag("ref")) {
                 street.setBogusName(true);
             }
             street.setStairs(steps);
+            
+            if (way.isTagTrue("toll") || way.isTagTrue("toll:motorcar"))
+                street.setToll(true);
+            else
+                street.setToll(false);
 
             /* TODO: This should probably generalized somehow? */
             if (way.isTagFalse("wheelchair") || (steps && !way.isTagTrue("wheelchair"))) {
@@ -1870,6 +1896,11 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
             }
 
             street.setSlopeOverride(wayPropertySet.getSlopeOverride(way));
+            
+            // < 0.04: account for 
+            if (carSpeed < 0.04) {
+                _log.warn(graph.addBuilderAnnotation(new StreetCarSpeedZero(way.getId())));
+            }
 
             if (customNamer != null) {
                 customNamer.nameWithEdge(way, street);
@@ -1878,6 +1909,15 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
             return street;
         }
 
+        private int getStreetClasses(OSMWithTags way) {
+            int link = 0;
+            String highway = way.getTag("highway");
+            if (highway != null && highway.endsWith(("_link"))) {
+                link = StreetEdge.CLASS_LINK;
+            }
+            return getPlatformClass(way) | link;
+        }
+        
         private int getPlatformClass(OSMWithTags way) {
             String highway = way.getTag("highway");
             if ("platform".equals(way.getTag("railway"))) {
@@ -2048,7 +2088,19 @@ public class OpenStreetMapGraphBuilderImpl implements GraphBuilder {
             if (iv == null) {
                 Coordinate coordinate = getCoordinate(node);
                 String label = "osm node " + nid;
-                iv = new IntersectionVertex(graph, label, coordinate.x, coordinate.y, label);
+                String highway = node.getTag("highway");
+                if ("motorway_junction".equals(highway)) {
+                    String ref = node.getTag("ref");
+                    if (ref != null) {
+                        ExitVertex ev = new ExitVertex(graph, label, coordinate.x, coordinate.y);
+                        ev.setExitName(ref);
+                        iv = ev;
+                    }
+                } 
+
+                if (iv == null) {
+                    iv = new IntersectionVertex(graph, label, coordinate.x, coordinate.y, label);
+                }
                 intersectionNodes.put(nid, iv);
                 endpoints.add(iv);
             }
