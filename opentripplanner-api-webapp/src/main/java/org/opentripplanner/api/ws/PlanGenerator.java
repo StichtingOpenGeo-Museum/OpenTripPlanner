@@ -45,6 +45,7 @@ import org.opentripplanner.routing.edgetype.ElevatorEdge;
 import org.opentripplanner.routing.edgetype.FreeEdge;
 import org.opentripplanner.routing.edgetype.HopEdge;
 import org.opentripplanner.routing.edgetype.LegSwitchingEdge;
+import org.opentripplanner.routing.edgetype.PlainStreetEdge;
 import org.opentripplanner.routing.edgetype.PreAlightEdge;
 import org.opentripplanner.routing.edgetype.PreBoardEdge;
 import org.opentripplanner.routing.edgetype.StreetEdge;
@@ -794,18 +795,47 @@ public class PlanGenerator {
                     // intersection
                     // to see if we should generate a "left to continue" instruction.
                     boolean shouldGenerateContinue = false;
-                    double angleDiff = getAbsoluteAngleDiff(thisAngle, lastAngle);
-                    for (Edge alternative : backState.getVertex().getOutgoingStreetEdges()) {
-                        if (alternative.getName().equals(streetName)) {
-                            // alternatives that have the same name
-                            // are usually caused by street splits
-                            continue;
+                    if (edge instanceof PlainStreetEdge) {
+                        // the next edges will be PlainStreetEdges, we hope
+                        double angleDiff = getAbsoluteAngleDiff(thisAngle, lastAngle);
+                        for (Edge alternative : backState.getVertex().getOutgoingStreetEdges()) {
+                            if (alternative.getName().equals(streetName)) {
+                                // alternatives that have the same name
+                                // are usually caused by street splits
+                                continue;
+                            }
+                            double altAngle = DirectionUtils.getFirstAngle(alternative
+                                    .getGeometry());
+                            double altAngleDiff = getAbsoluteAngleDiff(altAngle, lastAngle);
+                            if (angleDiff > Math.PI / 4 || altAngleDiff - angleDiff < Math.PI / 16) {
+                                shouldGenerateContinue = true;
+                                break;
+                            }
                         }
-                        double altAngle = DirectionUtils.getFirstAngle(alternative.getGeometry());
-                        double altAngleDiff = getAbsoluteAngleDiff(altAngle, lastAngle);
-                        if (angleDiff > Math.PI / 4 || altAngleDiff - angleDiff < Math.PI / 16) {
-                            shouldGenerateContinue = true;
-                            break;
+                    } else {
+                        double angleDiff = getAbsoluteAngleDiff(lastAngle, thisAngle);
+                        // FIXME: this code might be wrong with the removal of the edge-based graph
+                        State twoStatesBack = backState.getBackState();
+                        Vertex backVertex = twoStatesBack.getVertex();
+                        for (Edge alternative : backVertex.getOutgoingStreetEdges()) {
+                            List<Edge> alternatives = alternative.getToVertex()
+                                    .getOutgoingStreetEdges();
+                            if (alternatives.size() == 0) {
+                                continue; // this is not an alternative
+                            }
+                            alternative = alternatives.get(0);
+                            if (alternative.getName().equals(streetName)) {
+                                // alternatives that have the same name
+                                // are usually caused by street splits
+                                continue;
+                            }
+                            double altAngle = DirectionUtils.getFirstAngle(alternative
+                                    .getGeometry());
+                            double altAngleDiff = getAbsoluteAngleDiff(altAngle, lastAngle);
+                            if (angleDiff > Math.PI / 4 || altAngleDiff - angleDiff < Math.PI / 16) {
+                                shouldGenerateContinue = true;
+                                break;
+                            }
                         }
                     }
 
@@ -901,7 +931,7 @@ public class PlanGenerator {
     }
 
     private boolean isLink(Edge edge) {
-        return (((StreetEdge)edge).getStreetClass() & StreetEdge.CLASS_LINK) == StreetEdge.CLASS_LINK;
+        return edge instanceof StreetEdge && (((StreetEdge)edge).getStreetClass() & StreetEdge.CLASS_LINK) == StreetEdge.CLASS_LINK;
     }
 
     private double getAbsoluteAngleDiff(double thisAngle, double lastAngle) {
