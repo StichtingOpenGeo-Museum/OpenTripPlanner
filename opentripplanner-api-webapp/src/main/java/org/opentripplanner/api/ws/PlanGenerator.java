@@ -203,7 +203,9 @@ public class PlanGenerator {
                 if ( ! tt.isScheduled()) {
                     int delay = tt.getDepartureDelay(hop);
                     String d = "op tijd";
-		    int delayMin = Math.abs(delay % 60);
+		    int delayMin = Math.abs(delay / 60);
+                    if (Math.abs(delay % 60) > 30)
+                        delayMin += 1;
                     if (Math.abs(delay) > 60) {
                         d = String.format("%d min %s", delayMin, 
                                 (delay < 0) ? "vervroegd" : "vertraagd");
