@@ -35,7 +35,8 @@ public class KV8Update extends Update {
             if (row.get("JourneyStopType").equals("INFOPOINT"))
                 continue;
             int arrival = secondsSinceMidnight(row.get("ExpectedArrivalTime"));
-            int departure = secondsSinceMidnight(row.get("ExpectedDepartureTime"));
+            String etd = (row.get("JourneyStopType").equals("LAST")) ? row.get("ExpectedArrivalTime") : row.get("ExpectedDepartureTime");
+            int departure = secondsSinceMidnight(etd);
             KV8Update u = new KV8Update(
                     kv8TripId(row),   
                     kv8StopId(row), 
