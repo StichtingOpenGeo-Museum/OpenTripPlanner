@@ -10,14 +10,29 @@
 
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 package org.opentripplanner.routing.edgetype;
 
+import org.opentripplanner.routing.graph.Edge;
+import org.opentripplanner.routing.vertextype.OnboardVertex;
+import org.opentripplanner.routing.vertextype.TransitVertex;
+
 /**
- * Marker edges for DwellEdge
+ * A superclass for general trip pattern related edges
  * @author novalis
  *
  */
-public interface DwellEdge {
+public abstract class TablePatternEdge extends Edge implements PatternEdge {
+
+    private static final long serialVersionUID = 1L;
+
+    public TablePatternEdge(TransitVertex fromv, TransitVertex tov) {
+        super(fromv, tov);
+    }
+
+    public TableTripPattern getPattern() {
+        return ((OnboardVertex)fromv).getTripPattern();
+    }
+
+    public abstract int getStopIndex();
 
 }
