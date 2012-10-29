@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -41,6 +42,8 @@ import org.opentripplanner.api.model.transit.ServiceCalendarData;
 import org.opentripplanner.api.model.transit.StopList;
 import org.opentripplanner.api.model.transit.StopTime;
 import org.opentripplanner.api.model.transit.StopTimeList;
+import org.opentripplanner.common.model.P2;
+import org.opentripplanner.common.model.T2;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
@@ -289,12 +292,14 @@ public class TransitIndex {
             AgencyAndId stop = new AgencyAndId(stopAgencyId, stopId);
             Edge preBoardEdge = transitIndexService.getPreBoardEdge(stop);
             if (preBoardEdge == null)
-                break;
+                continue;
             Vertex boarding = preBoardEdge.getToVertex();
 
             RoutingRequest options = makeTraverseOptions(startTime, routerId);
 
-            for (Edge e : boarding.getOutgoing()) {
+            HashMap<Long, Edge> seen = new HashMap();
+            OUTER: for (Edge e : boarding.getOutgoing()) {
+                System.out.println("HERE: " + e);
                 // each of these edges boards a separate set of trips
                 for (StopTime st : getStopTimesForBoardEdge(startTime, endTime, options, e,
                         extended)) {
@@ -310,9 +315,17 @@ public class TransitIndex {
                     } else
                         result.stopTimes.add(st);
                     trips.add(st.trip);
+                    if (seen.containsKey(st.time)) {
+                        Edge old = seen.get(st.time);
+                        System.out.println("DUP: " + old);
+                        getStopTimesForBoardEdge(startTime, endTime, options, e,
+                                extended);
+                        //break OUTER;
+                    }
+                    seen.put(st.time, e);
                 }
             }
-
+/*
             // add the arriving stop times for cases where there are no departures
             Edge preAlightEdge = transitIndexService.getPreAlightEdge(stop);
             Vertex alighting = preAlightEdge.getFromVertex();
@@ -334,6 +347,7 @@ public class TransitIndex {
                     }
                 }
             }
+            */
         }
         Collections.sort(result.stopTimes, new Comparator<StopTime>(){
 
@@ -480,6 +494,7 @@ public class TransitIndex {
             result = e.traverse(s0);
             if (result == null)
                 break;
+            System.out.println("boarding at " + time + " on " + result.getBackTrip());
             time = result.getTime();
             if (time > endTime)
                 break;

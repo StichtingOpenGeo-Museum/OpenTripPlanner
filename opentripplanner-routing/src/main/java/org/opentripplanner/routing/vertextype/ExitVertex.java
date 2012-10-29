@@ -11,14 +11,28 @@
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-package org.opentripplanner.api.model;
+package org.opentripplanner.routing.vertextype;
 
-/**
- * Represents a turn direction, relative to the current heading.
- * 
- * CIRCLE_CLOCKWISE and CIRCLE_CLOCKWISE are used to represent traffic circles. 
- * 
- */
-public enum RelativeDirection {
-    HARD_LEFT, LEFT, SLIGHTLY_LEFT, CONTINUE, SLIGHTLY_RIGHT, RIGHT, HARD_RIGHT, CIRCLE_CLOCKWISE, CIRCLE_COUNTERCLOCKWISE, ELEVATOR, UTURN_LEFT, UTURN_RIGHT;
+import org.opentripplanner.routing.graph.Graph;
+
+public class ExitVertex extends IntersectionVertex {
+    
+    private static final long serialVersionUID = -1403959315797898914L;
+    private String exitName;
+    
+    public ExitVertex(Graph g, String label, double x, double y) {
+        super(g, label, x, y);
+    }
+
+    public String getExitName() {
+        return exitName;
+    }
+
+    public void setExitName(String exitName) {
+        this.exitName = exitName;
+    }
+
+    public String toString() {
+        return "ExitVertex(" + super.toString() + ")";
+    }
 }

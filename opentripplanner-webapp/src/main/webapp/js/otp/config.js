@@ -58,7 +58,7 @@ otp.config_defaults = {
     planner : {
         url            : null,
         printUrl       : "print.html",
-        maxTransfers   : null,  // when maxTransfers != null, value is sent down as maxTransfers param to the api (current api default maxTransfers=2)
+        maxTransfers   : 6,  // when maxTransfers != null, value is sent down as maxTransfers param to the api (current api default maxTransfers=2)
         appName        : "OpenTripPlanner Map",
 
         // options to turn stuff on / off on the planner

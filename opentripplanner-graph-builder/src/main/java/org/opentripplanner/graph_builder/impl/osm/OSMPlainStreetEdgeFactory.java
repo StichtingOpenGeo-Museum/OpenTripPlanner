@@ -13,11 +13,14 @@ import com.vividsolutions.jts.geom.LineString;
 public interface OSMPlainStreetEdgeFactory {
     public PlainStreetEdge createEdge(OSMNode fromNode, OSMNode toNode, OSMWithTags wayOrArea,
             IntersectionVertex startEndpoint, IntersectionVertex endEndpoint, LineString geometry,
-            String name, double length, StreetTraversalPermission permissions, boolean back);
+
+            String name, double length, StreetTraversalPermission permissions, boolean back,
+            float carSpeed);
 
     public AreaEdge createAreaEdge(OSMNode nodeI, OSMNode nodeJ,
             OSMWithTags areaEntity, IntersectionVertex startEndpoint,
             IntersectionVertex endEndpoint, LineString geometry, String name,
-            double length, StreetTraversalPermission permissions, boolean back, 
-            AreaEdgeList area);
+            double length, StreetTraversalPermission permissions, boolean back,
+            float carSpeed, AreaEdgeList area);
+
 }

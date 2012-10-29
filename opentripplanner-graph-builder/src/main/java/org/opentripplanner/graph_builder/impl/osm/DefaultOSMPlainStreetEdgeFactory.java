@@ -15,9 +15,10 @@ public class DefaultOSMPlainStreetEdgeFactory implements OSMPlainStreetEdgeFacto
     @Override
     public PlainStreetEdge createEdge(OSMNode fromNode, OSMNode toNode, OSMWithTags way,
             IntersectionVertex startEndpoint, IntersectionVertex endEndpoint, LineString geometry,
-            String name, double length, StreetTraversalPermission permissions, boolean back) {
+            String name, double length, StreetTraversalPermission permissions, boolean back,
+            float carSpeed) {
         return new PlainStreetEdge(startEndpoint, endEndpoint, geometry, name, length, permissions,
-                back);
+                back, carSpeed);
     }
 
     @Override
@@ -25,9 +26,9 @@ public class DefaultOSMPlainStreetEdgeFactory implements OSMPlainStreetEdgeFacto
             OSMWithTags areaEntity, IntersectionVertex startEndpoint,
             IntersectionVertex endEndpoint, LineString geometry, String name,
             double length, StreetTraversalPermission permissions,
-            boolean back, AreaEdgeList area) {
+            boolean back, float carSpeed, AreaEdgeList area) {
         return new AreaEdge(startEndpoint, endEndpoint, geometry, name, length, permissions,
-                back, area);
+                back, carSpeed, area);
     }
 
 }
