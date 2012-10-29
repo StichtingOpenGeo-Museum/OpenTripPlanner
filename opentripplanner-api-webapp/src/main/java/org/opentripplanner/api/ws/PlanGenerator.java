@@ -197,7 +197,7 @@ public class PlanGenerator {
             }
 
 	    // debug: push vehicle late status out to UI
-            if (backEdge instanceof PatternHop) {
+/*            if (backEdge instanceof PatternHop) {
                 TripTimes tt = state.getTripTimes();
                 int hop = ((PatternHop)backEdge).stopIndex;
                 LOG.info("{} {}", tt.getTrip().toString(), hop);
@@ -216,7 +216,7 @@ public class PlanGenerator {
                     LOG.info(d);
 		}
             }
-
+*/
             TraverseMode mode = state.getBackMode();
             if (mode != null) {
                 long dt = state.getAbsTimeDeltaSec();
