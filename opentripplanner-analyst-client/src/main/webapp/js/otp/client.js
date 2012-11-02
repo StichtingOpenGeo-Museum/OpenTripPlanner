@@ -23,7 +23,7 @@ var map = new L.Map('map', {
 	//fadeAnimation: false
 });
 
-var mapboxURL = "http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-streets/{z}/{x}/{y}.png";
+var mapboxURL = "http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-light/{z}/{x}/{y}.png";
 var OSMURL    = "http://{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png";
 var aerialURL = "http://{s}.mqcdn.com/naip/{z}/{x}/{y}.png";
 
@@ -46,7 +46,7 @@ var flags = {
 
 var params = {
     layers: 'traveltime',
-    styles: 'mask',
+    styles: 'color30',
     batch: true,
 };
 
