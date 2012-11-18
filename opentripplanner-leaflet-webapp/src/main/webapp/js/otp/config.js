@@ -8,8 +8,8 @@ if(typeof(otp.config) == "undefined" || otp.config == null) otp.config = {};
 otp.config = {
 
     // OTP server address and routerId (if applicable)
-    hostname : "http://nyc.deployer.opentripplanner.org",
-    routerId : "req-241",
+    hostname : "http://opentripplanner.eu",
+    routerId : "benelux",
 
     // Base map tiles settings:
     tileUrl : 'http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-streets/{z}/{x}/{y}.png',
@@ -17,9 +17,9 @@ otp.config = {
     tileAttrib : 'Routing powered by <a href="http://opentripplanner.org/">OpenTripPlanner</a>, Map tiles from MapBox (<a href="http://mapbox.com/about/maps/">terms</a>) and OpenStreetMap ',
     
     // map start location and zoom settings 
-    initLatLng : new L.LatLng(40.7195,-74), // (NYC)
-    initZoom : 14,
-    minZoom : 13,
+    initLatLng : new L.LatLng(52.07,5.2), // (NL)
+    initZoom : 8,
+    minZoom : 6,
     maxZoom : 17,
 
     showLogo:           true,
