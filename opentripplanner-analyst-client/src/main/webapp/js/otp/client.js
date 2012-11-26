@@ -16,10 +16,10 @@ var INIT_LOCATION = new L.LatLng(52.374004,4.890359); // Amsterdam
 var AUTO_CENTER_MAP = false;
 var ROUTER_ID = "";
 var MSEC_PER_HOUR = 60 * 60 * 1000;
-var MSEC_PER_DAY = 86400000;
-// var BASE_DATE_MSEC = Date.parse('2012-11-15');
+var MSEC_PER_DAY = MSEC_PER_HOUR * 24;
 // Note: time zone does not matter since we are turning this back into text before sending it
 var BASE_DATE_MSEC = new Date().getTime() - new Date().getTime() % MSEC_PER_DAY; 
+// var BASE_DATE_MSEC = Date.parse('2012-11-15');
 
 
 var map = new L.Map('map', {
@@ -44,7 +44,8 @@ var aerialLayer = new L.TileLayer(aerialURL,
 		{subdomains: ["oatile1","oatile2","oatile3","oatile4"], maxZoom: 18, attribution: osmAttrib});
 
 var flags = {
-	twoEndpoint: false
+	twoEndpoint: false,
+	twoSearch: false
 };
 
 // convert a map of query parameters into a query string, 
@@ -171,7 +172,6 @@ if (AUTO_CENTER_MAP) {
 }
 map.setView(initLocation, 12);
 var initLocation2 = new L.LatLng(initLocation.lat + 0.05, initLocation.lng + 0.05);
-console.log(initLocation, initLocation2);
 
 //Marker icons
 
@@ -180,9 +180,7 @@ var redMarkerIcon = new L.Icon({ iconUrl: 'js/lib/leaflet/images/marker-red.png'
 var origMarker = new L.Marker(initLocation,  {draggable: true, icon: greenMarkerIcon });
 var destMarker = new L.Marker(initLocation2, {draggable: true, icon: redMarkerIcon });
 origMarker.on('dragend', mapSetupTool);
-origMarker.bindPopup("I am the origin.");
 destMarker.on('dragend', mapSetupTool);
-destMarker.bindPopup("I am the destination.");
 
 // add layers to map 
 // do not add analyst layer yet -- it will be added in refresh() once params are pulled in
@@ -231,21 +229,34 @@ function mapSetupTool() {
 		break;
 	}
 	params.time = [$('#setupTime').val()];
-    if (flags.twoEndpoint)
-        params.time.push( $('#setupTime2').val() );
-    params.mode = $('#setupMode').val();
-    params.maxWalkDistance = $('#setupMaxDistance').val();
+	params.mode = [$('#setupMode').val()];
+	params.maxWalkDistance = [$('#setupMaxDistance').val()];
+	params.arriveBy = [$('#arriveByA').val()];
 
+	if (flags.twoSearch) {
+		var pushIfDifferent = function (elementId, paramName) {
+			console.log(elementId);
+			var elemval = document.getElementById(elementId).value;
+			if (elemval != 'same') {
+				params[paramName].push(elemval);
+			}
+		};
+		var args = [['setupTime2', 'time'],
+		            ['setupMode2', 'mode'],
+		            ['setupMaxDistance2', 'maxWalkDistance'],
+		            ['arriveByB', 'arriveBy']];
+		for (i in args) {
+			pushIfDifferent.apply(this, args[i]);
+		}
+	}
+    
     // get origin and destination coordinate from map markers
 	var o = origMarker.getLatLng();
 	params.fromPlace = [o.lat + ',' + o.lng];
-	params.arriveBy = [$('#arriveByA').val()];
     if (flags.twoEndpoint) {
     	var d = destMarker.getLatLng();
     	params.fromPlace.push(d.lat + ',' + d.lng);
-    	params.arriveBy.push($('#arriveByB').val());
     }
-	
 	// set from and to places to the same string(s) so they work for both arriveBy and departAfter
 	params.toPlace = params.fromPlace;
     	
@@ -336,26 +347,8 @@ function setFormDisabled(formName, disabled) {
     }
 }
 
-function setTwoEndpoint(two) {
-	if (two) {
-		if (!(flags.twoEndpoint)) {
-			var llo = origMarker.getLatLng();
-			var lld = destMarker.getLatLng();
-			lld.lat = llo.lat;
-			lld.lng = llo.lng + 0.02;
-		}
-		//$('#endpointBControls').show( 200 );
-		$('#endpointBControls').fadeIn( 500 );
-		map.addLayer(destMarker);
-	} else {
-		//$('#endpointBControls').hide( 800 );
-		$('#endpointBControls').fadeOut( 500 );
-		map.removeLayer(destMarker);
-	}
-	flags.twoEndpoint = two;
-}
 
-// bind js functions to HTML element events (handle almost everything at the form level)
+/* Bind JS functions to events (handle almost everything at the form level) */
 
 // anytime a form element changes, refresh the map
 $('#searchTypeForm').change( mapSetupTool );
@@ -378,9 +371,43 @@ $('#searchTypeForm').change( mapSetupTool );
 $('#searchTypeSelect').change( function() { 
 	var type = this.value;
 	console.log('search type changed to', type);
-	if (type == 'single')
-		setTwoEndpoint(false);
-	else
-		setTwoEndpoint(true); // but in diff1 we should hide the second marker
+	if (type == 'single' || type == 'diff1') {
+		// switch to or stay in one-endpoint mode
+		map.removeLayer(destMarker);
+		flags.twoEndpoint = false;
+	} else { 
+		if (!(flags.twoEndpoint)) { 
+			// switch from one-endpoint to two-endpoint mode
+			var llo = origMarker.getLatLng();
+			var lld = destMarker.getLatLng();
+			lld.lat = llo.lat;
+			lld.lng = llo.lng + 0.02;
+			map.addLayer(destMarker);
+			flags.twoEndpoint = true;
+		}
+	}
+	if (type == 'single') {
+		$('.secondaryControl').fadeOut( 500 );
+		flags.twoSearch = false;
+	} else { 
+		$('.secondaryControl').fadeIn( 500 );
+		flags.twoSearch = true;
+	}
+	if (type == 'ppa') {
+		// lock arriveBy selectors and rename endpoints
+		$('#headerA').text('Origin Setup');
+		$('#headerB').text('Destination Setup');
+		$('#arriveByA').val('false').prop('disabled', true);
+		$('#arriveByB').val('true').prop('disabled', true);
+	} else {
+		$('#arriveByA').prop('disabled', false);
+		$('#arriveByB').prop('disabled', false);
+		if (type == 'single') {
+			$('#headerA').text('Search Setup');
+		} else {
+			$('#headerA').text('Search A Setup');
+			$('#headerB').text('Search B Setup');
+		}
+	}
 }).change(); // trigger this event (and implicitly a form change event) immediately upon binding
 
