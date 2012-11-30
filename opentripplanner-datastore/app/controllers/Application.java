@@ -1,6 +1,7 @@
 package controllers;
 
 import play.*;
+import play.cache.*;
 import play.mvc.*;
 
 import java.util.*;
@@ -17,34 +18,30 @@ public class Application extends Controller {
         hd.values.add("*");
         Http.Response.current().headers.put("Access-Control-Allow-Origin",hd);      
     }
-        
-    public static void index() {
-        List<OTPQuery> queries = OTPQuery.all().fetch(10);
-        render(queries);
-    }
-    
-    public static void getQueries(String userName, Integer limit) {
-        List<OTPQuery> queries;
-        if(limit == null)
-            queries = OTPQuery.find("userName", userName).fetch();
-        else {
-            queries = OTPQuery.find("userName = '"+userName+"' order by timeStamp desc").fetch(limit);
-            System.out.println("fetched w/ limit = "+limit);
+    @Before
+    public static void checkPassword() {
+        request.user = null;
+
+        String username = params.get("userName");
+        String password = params.get("password");
+        User user = Cache.get(username, User.class);
+        if (user == null) {
+            Logger.debug("no user in cache");
+            user = User.find("byUsername", username).first();
+            if (user == null) {
+                Logger.debug("no user by this username: count = %s", User.count());
+                forbidden();
+            }
         }
-        renderJSON(queries);
-    }
-    
-    public static void newQuery(String userName, String queryParams, String fromPlace, String toPlace) {
-        OTPQuery query = new OTPQuery(userName, queryParams, fromPlace, toPlace);
-        query.save();
-        Long id = query.id;
-        render(userName, id);
+        if (user.checkPassword(password)) {
+            request.user = username;
+        } else {
+            Logger.debug("bad password");
+            forbidden();
+        }
     }
 
-    public static void deleteQuery(Long id) {
-        OTPQuery query = OTPQuery.findById(id);  
-        query.delete();
-        render(id);
-    }  
-   
+    static User getUser() {
+        return User.find("byUsername", request.user).first();
+    }
 }

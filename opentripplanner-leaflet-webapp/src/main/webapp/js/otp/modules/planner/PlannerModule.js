@@ -141,7 +141,7 @@ otp.modules.planner.PlannerModule =
         this.planTrip(queryParams);
     },
     
-    planTrip : function(existingQueryParams, skipSave) {
+    planTrip : function(existingQueryParams, apiMethod) {
     
         if(typeof this.planTripStart == 'function') this.planTripStart();
         
@@ -154,7 +154,8 @@ otp.modules.planner.PlannerModule =
         	this.currentRequest = null;
         }
     	
-        var url = otp.config.hostname + '/opentripplanner-api-webapp/ws/plan';
+    	apiMethod = apiMethod || 'plan';
+        var url = otp.config.hostname + '/opentripplanner-api-webapp/ws/'+apiMethod;
         this.pathLayer.clearLayers();        
         
         var this_ = this;
@@ -173,10 +174,10 @@ otp.modules.planner.PlannerModule =
        	    queryParams = {             
                 fromPlace: this.startLatLng.lat+','+this.startLatLng.lng,
                 toPlace: this.endLatLng.lat+','+this.endLatLng.lng,
+                time : (this.time) ? this.time : moment().format("h:mma"),
+                date : (this.date) ? this.date : moment().format("MM-DD-YYYY"),
                 mode: this.mode
             };
-            if(this.time !== null) _.extend(queryParams, { time : this.time } );
-            if(this.date !== null) _.extend(queryParams, { date : this.date } );
             if(this.arriveBy !== null) _.extend(queryParams, { arriveBy : this.arriveBy } );
             if(this.optimize !== null) _.extend(queryParams, { optimize : this.optimize } );
             if(this.optimize === 'TRIANGLE') {
@@ -202,13 +203,18 @@ otp.modules.planner.PlannerModule =
                 $('#otp-spinner').hide();
                 
                 if(data.plan) {
+
+                    // compare returned plan.date to sent date/time to determine timezone offset (unless set explicitly in config.js)
+                    otp.config.timeOffset = (otp.config.timeOffset) ||
+                        (moment(queryParams.date+" "+queryParams.time, "MM-DD-YYYY h:mma") - moment(data.plan.date))/3600000;
+                        
                     var itin = data.plan.itineraries[0];
                     this_.processPlan(data.plan, queryParams, (existingQueryParams !== undefined));
 
                     this_.updateTipStep(3);
                     
-                    if(!skipSave)
-                    	this_.savePlan(queryParams);
+                    /*if(!skipSave)
+                    	this_.savePlan(queryParams);*/
                     
                 }
                 else {
@@ -277,6 +283,7 @@ otp.modules.planner.PlannerModule =
         if(mode === "BICYCLE") return '#0073e5';
         if(mode === "SUBWAY") return '#f00';
         if(mode === "BUS") return '#080';
+        if(mode === "TRAM") return '#800';
         return '#aaa';
     },
         
