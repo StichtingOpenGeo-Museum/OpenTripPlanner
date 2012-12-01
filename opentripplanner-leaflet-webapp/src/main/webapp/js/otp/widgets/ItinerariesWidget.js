@@ -152,7 +152,7 @@ otp.widgets.ItinerariesWidget =
             }, function(evt) {
                 this_.module.clearHighlights();
             });
-            $("<div>Leg details go here</div>").appendTo(itinAccord);
+            this_.renderLeg(leg, (l>0 ? itin.legs[l-1] : null)).appendTo(itinAccord);
         }
         itinAccord.accordion({
             active: false,
@@ -163,13 +163,38 @@ otp.widgets.ItinerariesWidget =
         var itinDiv = $("<div></div>");
 
         // add start and end time rows        
-        itinDiv.append("<div class='otp-itinStartRow'><b>Start</b>: "+otp.util.Time.formatItinTime(itin.startTime, "h:mma, MMM. Do YYYY")+"</div>");
+        itinDiv.append("<div class='otp-itinStartRow'><b>Start</b>: "+otp.util.Time.formatItinTime(itin.startTime)+"</div>");
         itinDiv.append(itinAccord);
-        itinDiv.append("<div class='otp-itinEndRow'><b>End</b>: "+otp.util.Time.formatItinTime(itin.endTime, "h:mma, MMM. Do YYYY")+"</div>");
+        itinDiv.append("<div class='otp-itinEndRow'><b>End</b>: "+otp.util.Time.formatItinTime(itin.endTime)+"</div>");
 
         // TODO: add trip summary
         
         return itinDiv;
+    },
+    
+    renderLeg : function(leg, previousLeg) {
+        if(otp.util.Itin.isTransit(leg.mode)) {
+            var html = '<div>';
+            
+            var legDiv = $('<div></div>');
+            
+            $('<div class="otp-itin-leg-leftcol">'+otp.util.Time.formatItinTime(leg.startTime, "h:mma")+"</div>").appendTo(legDiv);
+            $('<div class="otp-itin-leg-endpointDesc"><b>Board</b> at '+leg.from.name+'</div>').appendTo(legDiv);
+
+            $('<div class="otp-itin-leg-elapsedDesc">Time in transit: '+otp.util.Time.msToHrMin(leg.duration)+'</div>').appendTo(legDiv);
+
+            $('<div class="otp-itin-leg-leftcol">'+otp.util.Time.formatItinTime(leg.endTime, "h:mma")+"</div>").appendTo(legDiv);
+            $('<div class="otp-itin-leg-endpointDesc"><b>Alight</b> at '+leg.to.name+'</div>').appendTo(legDiv);
+            
+            return legDiv;
+
+            /*if(previousLeg) {
+                html += '<div class="otp-itin-leg-leftcol">'+otp.util.Time.formatItinTime(previousLeg.endTime, "h:mma")+"</div>";
+                html += '<div class="otp-itin-leg-endpointDesc">Arrive at '+leg.from.name+'</div>';
+                html += '<div class="otp-itin-leg-elapsedDesc">Wait time: '+otp.util.Time.msToHrMin(leg.startTime-previousLeg.endTime)+'</div>';
+            }*/
+        }
+        return $("<div>Leg details go here</div>");
     }
     
 });

@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-
+import java.util.Iterator;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -426,8 +426,13 @@ public class RoutingRequest implements Cloneable, Serializable {
     }
 
     public void setBannedRoutes(String s) {
-        if (s != null && !s.equals(""))
+        if (s != null && !s.equals("")){
             bannedRoutes = new HashSet<RouteSpec>(RouteSpec.listFromString(s));
+            Iterator<RouteSpec> iter = bannedRoutes.iterator();
+            while (iter.hasNext()){
+                System.out.println(iter.next().toString());
+            }
+        }            
     }
     
     public final static int MIN_SIMILARITY = 1000;

@@ -136,6 +136,7 @@ public class FrequencyAlight extends Edge  implements OnBoardReverseEdge {
                 RouteSpec spec = new RouteSpec(route.getId().getAgencyId(),
                         GtfsLibrary.getRouteName(route));
                 if (options.bannedRoutes.contains(spec)) {
+                    System.out.println("We have banned route "+route.getId());
                     return null;
                 }
             }

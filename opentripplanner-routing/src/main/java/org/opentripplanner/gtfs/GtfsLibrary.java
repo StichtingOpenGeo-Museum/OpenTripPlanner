@@ -104,6 +104,7 @@ public class GtfsLibrary {
             return TraverseMode.SUBWAY;
         case 2:
             return TraverseMode.RAIL;
+        case 700:
         case 3:
             return TraverseMode.BUS;
         case 4:

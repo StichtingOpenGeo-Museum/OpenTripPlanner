@@ -61,6 +61,7 @@ otp.planner.StaticForms = {
     m_modeStore           : null,
     m_modeForm            : null,
     m_wheelchairForm      : null,
+    m_hstForm             : null,
     m_optionsManager      : null,
 
     m_bikeTriangle          : null,
@@ -225,7 +226,9 @@ otp.planner.StaticForms = {
 
         if(this.unpreferredRoutes)
             added_params.unpreferredRoutes = this.unpreferredRoutes;
-
+        if (!this.m_hstForm.getValue()){
+            added_params.bannedRoutes = '200_200-THA,200_200-HSI,200_Fyra,200_Thalys';
+        }
         // step 6: set data up, including the added params & submit...
         var data = {
             method  : 'GET',
@@ -632,6 +635,8 @@ otp.planner.StaticForms = {
                 forms.m_walkSpeedForm.setValue(params.walkSpeed);
             if(params.wheelchair && this.planner.options.showWheelchairForm)
                 forms.m_wheelchairForm.setValue(params.wheelchair);
+            if(params.hst)
+                forms.m_hstForm.setValue(params.hst);
 
             // max transfers url param sent to API
             if(params.maxTransfers && params.maxTransfers >= 0 && params.maxTransfers < 1000)
@@ -767,6 +772,7 @@ otp.planner.StaticForms = {
         retVal.mode            = this.m_modeForm.getValue();
         if(this.planner.options.showWheelchairForm)
             retVal.wheelchair      = this.m_wheelchairForm.getValue();
+        retVal.hst = this.m_hstForm.getValue()
         if(this.planner.options.showIntermediateForms)
             retVal.intermediate_places = ''; //TODO: intermediate stops
 
@@ -777,7 +783,6 @@ otp.planner.StaticForms = {
         catch(e)
         {
         }
-
         return retVal; 
     },
 
@@ -974,11 +979,14 @@ otp.planner.StaticForms = {
         Ext.state.Manager.getProvider();
 
         // step 2: create the forms
-        var comboBoxOptions = {layout:'anchor', label:'', cls:'nudgeRight', msgTarget:'under', locale:this.locale, poi:this.poi, appendGeocodeName:this.planner.options.appendGeocodeName};
+        var comboBoxOptions = {layout:'anchor', label:'', cls:'nudgeRight', msgTarget:'under', locale:this.locale, poi:this.poi, 
+appendGeocodeName:this.planner.options.appendGeocodeName};
         if(this.geocoder && this.geocoder.url)
             comboBoxOptions.url = this.geocoder.url; 
-        var fromFormOptions = Ext.apply({}, {id:otp.util.Constants.fromFormID, name:'from', emptyText:this.locale.tripPlanner.labels.from}, comboBoxOptions);
-        var toFormOptions   = Ext.apply({}, {id:otp.util.Constants.toFormID,   name:'to',   emptyText:this.locale.tripPlanner.labels.to}, comboBoxOptions);
+        var fromFormOptions = Ext.apply({}, {id:otp.util.Constants.fromFormID, name:'from', emptyText:this.locale.tripPlanner.labels.from}, 
+comboBoxOptions);
+        var toFormOptions   = Ext.apply({}, {id:otp.util.Constants.toFormID,   name:'to',   emptyText:this.locale.tripPlanner.labels.to}, 
+comboBoxOptions);
         if(this.isSolrGeocoderEnabled())
         {
             this.m_fromForm = new otp.core.SolrComboBox(fromFormOptions);
@@ -1290,7 +1298,7 @@ otp.planner.StaticForms = {
             hiddenName:     'walkSpeed',
             fieldLabel:     this.locale.tripPlanner.labels.walkSpeed,
             store:          this.m_walkSpeedStore,
-            value:          this.m_walkSpeedStore.getAt(2).get('opt'),
+            value:          this.m_walkSpeedStore.getAt(4).get('opt'),
             displayField:   'text',
             valueField:     'opt',
             anchor:         this.FIELD_ANCHOR,
@@ -1342,6 +1350,26 @@ otp.planner.StaticForms = {
             forceSelection: true,
             selectOnFocus:  true
         });
+
+        this.m_hstForm = new Ext.form.Checkbox({
+            id:             'trip-hst-form',
+            name:           'hst',
+            hiddenName:     'hst',
+            fieldLabel:     'Incl. HST-treinen',
+            inputValue:     'true',
+            displayField:   'text',
+            valueField:     'opt',
+            checked:         true,
+            anchor:         this.FIELD_ANCHOR,
+            mode:           'local',
+            triggerAction:  'all',
+            editable:       false,
+            allowBlank:     false,
+            lazyRender:     false,
+            typeAhead:      true,
+            forceSelection: true,
+            selectOnFocus:  true
+        });
         
         this.m_bikeTriangleContainer = new Ext.Panel({  
             name    :           'bikeTriangleContainer'
@@ -1363,7 +1391,8 @@ otp.planner.StaticForms = {
                 maxWalk:      this.m_maxWalkDistanceForm,
                 walkSpeed:    this.m_walkSpeedForm,
                 locale:       this.locale,
-                bikeTriangle: this.m_bikeTriangle
+                bikeTriangle: this.m_bikeTriangle,
+                hst         : this.m_hstForm
             };
 
             if(this.planner.options.showWheelchairForm)
@@ -1375,7 +1404,7 @@ otp.planner.StaticForms = {
         var retVal = [this.m_modeForm, this.m_optimizeForm, this.m_bikeTriangleContainer, this.m_maxWalkDistanceForm, this.m_walkSpeedForm];
         if(this.planner.options.showWheelchairForm)
             retVal.push(this.m_wheelchairForm);
-
+        retVal.push(this.m_hstForm);
         return retVal;
 
     },

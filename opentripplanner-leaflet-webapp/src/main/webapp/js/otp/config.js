@@ -22,8 +22,8 @@ otp.config = {
     minZoom : 6,
     maxZoom : 17,*/
     // OTP server address and routerId (if applicable)
-    hostname : "http://otpna-c.deployer.opentripplanner.org",
-    routerId : "req-1028",
+    hostname : "http://opentripplanner.eu",
+    routerId : "benelux",
 
     // Base map tiles settings:
     tileUrl : 'http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-streets/{z}/{x}/{y}.png',
@@ -31,9 +31,9 @@ otp.config = {
     tileAttrib : 'Routing powered by <a href="http://opentripplanner.org/">OpenTripPlanner</a>, Map tiles from MapBox (<a href="http://mapbox.com/about/maps/">terms</a>) and OpenStreetMap ',
     
     // map start location and zoom settings 
-    initLatLng : new L.LatLng(45.523307,-122.676086), // portland
-    initZoom : 14,
-    minZoom : 13,
+    initLatLng : new L.LatLng(52.07,5.2), // NL
+    initZoom : 8,
+    minZoom : 6,
     maxZoom : 17,
 
     showLogo:           true,
@@ -68,5 +68,7 @@ otp.config = {
     //addThisPubId    : 'your-addthis-id',
     //addThisTitle    : 'Your title for AddThis sharing messages',
     
+    timeFormat  : "h:mma",
+    dateFormat  : "MMM. Do YYYY"
 };
 

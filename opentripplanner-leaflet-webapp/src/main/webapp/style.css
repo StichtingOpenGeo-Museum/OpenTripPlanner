@@ -642,6 +642,44 @@ h6.drag-to-change {
     text-align: center;
 }
 
+.otp-itin-leg-leftcol {
+    font-size: .8em;
+    color: gray;
+    width: 4em;
+    float: left;
+}
+
+.otp-itin-leg-endpointDesc {
+    font-size: .8em;
+    border-left: 1px solid #ccc;
+    margin-left: 5em;
+    padding-left: .5em;
+}
+
+.otp-itin-leg-elapsedDesc {
+    font-size: .8em;
+    font-style: italic;
+    border-left: 1px solid #ccc;
+    color: gray;
+    margin-left: 5em;
+    padding: .8em 0em .8em .5em;
+}
+
+.otp-itin-iconModeSymbol {
+    width: 16px;
+    height: 16px;
+    margin-left: 7px;
+    background: black;
+}
+
+.otp-itin-div-icon {
+    width: 20px;
+    height: 30px;
+    background: white;
+    text-align: center;
+    font-size: 9px;
+}
+
 /* Past Queries Widget */
 
 .otp-pastQueriesWidget {
