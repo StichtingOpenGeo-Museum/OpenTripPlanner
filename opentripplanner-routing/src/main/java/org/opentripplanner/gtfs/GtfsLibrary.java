@@ -111,6 +111,7 @@ public class GtfsLibrary {
             return TraverseMode.RAIL;
         case 700:
         case 3:
+        case 700:
             return TraverseMode.BUS;
         case 1000:
         case 4:
