@@ -99,14 +99,20 @@ public class GtfsLibrary {
     public static TraverseMode getTraverseMode(Route route) {
         switch (route.getType()) {
         case 0:
+        case 900:
             return TraverseMode.TRAM;
         case 1:
+        case 400:
             return TraverseMode.SUBWAY;
         case 2:
+        case 100:
+        case 102:
+        case 109:
             return TraverseMode.RAIL;
         case 700:
         case 3:
             return TraverseMode.BUS;
+        case 1000:
         case 4:
             return TraverseMode.FERRY;
         case 5:
