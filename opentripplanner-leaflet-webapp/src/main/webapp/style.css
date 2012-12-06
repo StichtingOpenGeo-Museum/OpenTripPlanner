@@ -427,6 +427,31 @@ body {
 }
 
 
+#otp-map-contextMenu {
+  position : fixed;
+  z-index: 1000;
+  padding: 0px;
+  background: #eee;
+  border: 1px solid #acacac;
+  border-top: 1px solid #bfbfbf;
+  border-bottom: 1px solid #9a9a9a;
+  -webkit-border-radius: 3px;
+     -moz-border-radius: 3px;
+          border-radius: 3px;
+     -moz-box-shadow: inset 0 2px 0 rgba(255,255,255,0.5);
+  -webkit-box-shadow: inset 0 2px 0 rgba(255,255,255,0.5);
+          box-shadow: inset 0 2px 0 rgba(255,255,255,0.5);
+}
+
+.otp-map-contextMenu-item {
+    padding: .4em;
+    cursor: pointer;
+}
+
+.otp-map-contextMenu-item:hover {
+    background: #f8f8f8;
+}
+
 /* Widgets
 -------------------------------------------------------------- */
   
@@ -581,8 +606,8 @@ h6.drag-to-change {
 }
 
 #otp-calltaker-optionsWidget {
-    bottom: 25px;
-    left: 50px;
+    bottom: 10px;
+    left: 10px;
 }
 
 /* Date/Time Picker */
@@ -615,7 +640,7 @@ h6.drag-to-change {
 
 .otp-itinsWidget {
   top: 60px;
-  left: 50px;
+  left: 10px;
   width: 300px;
   height: 250px;
 }
@@ -675,7 +700,8 @@ h6.drag-to-change {
     font-size: .8em;
     border-left: 1px solid #ccc;
     margin-left: 5em;
-    padding-left: .5em;
+    padding: .8em 0 0 .5em;
+    cursor: pointer;
 }
 
 .otp-itin-leg-elapsedDesc {
@@ -685,6 +711,21 @@ h6.drag-to-change {
     color: gray;
     margin-left: 5em;
     padding: .8em 0em .8em .5em;
+}
+
+.otp-itin-leg-intStopsHeader {
+    font-size: .8em;
+    font-weight: bold;
+    padding: 0 0 .5em .5em;
+    border-left: 1px solid #ccc;
+    margin-left: 5em;
+}
+
+.otp-itin-leg-intStopsList {
+    font-size: .8em;
+    padding: 0 0 0 .5em;
+    border-left: 1px solid #ccc;
+    margin-left: 5em;
 }
 
 .otp-itin-iconModeSymbol {
@@ -719,7 +760,7 @@ h6.drag-to-change {
 }
 
 .otp-itin-div-icon-nw-highlight {
-    background: url('images/mode/mode_bubble_nw.png');
+    background: url('images/mode/mode_bubble_nw_highlight.png');
 }
 
 .otp-itin-div-icon-ne-highlight {
@@ -746,10 +787,10 @@ h6.drag-to-change {
 }
 
 .otp-itin-step-row {
-    /*height: 2.5em;*/
     background: #e8e8e8;
     margin-bottom: .3em;
     padding: .3em;
+    cursor: pointer;
 }
 
 .otp-itin-step-icon {
@@ -759,16 +800,27 @@ h6.drag-to-change {
     float: left;
 }
 
+.otp-itin-step-dist {
+    margin: 0px 4px 0px 8px;
+    font-size: .8em;
+    width: 25px;
+    float: right;
+    text-align: center;
+    color: gray;
+    
+}
+
 .otp-itin-step-text {
     font-size: .8em;
+    margin: 0px 30px;
 }
 
 
 /* Past Queries Widget */
 
 .otp-pastQueriesWidget {
-  top: 60px;
-  right: 20px;
+  bottom: 20px;
+  right: 10px;
 }
 
 .otp-pastQueriesHeader {

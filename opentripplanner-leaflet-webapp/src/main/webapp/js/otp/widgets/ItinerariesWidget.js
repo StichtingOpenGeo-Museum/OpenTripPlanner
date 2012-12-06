@@ -191,16 +191,48 @@ otp.widgets.ItinerariesWidget =
     },
     
     renderLeg : function(leg, previousLeg) {
+        var this_ = this;
         if(otp.util.Itin.isTransit(leg.mode)) {
             var legDiv = $('<div></div>');
             
             $('<div class="otp-itin-leg-leftcol">'+otp.util.Time.formatItinTime(leg.startTime, "h:mma")+"</div>").appendTo(legDiv);
-            $('<div class="otp-itin-leg-endpointDesc"><b>Board</b> at '+leg.from.name+'</div>').appendTo(legDiv);
+
+            $('<div class="otp-itin-leg-endpointDesc"><b>Board</b> at '+leg.from.name+'</div>')
+            .appendTo(legDiv)
+            .click(function(evt) {
+                this_.module.webapp.map.lmap.panTo(new L.LatLng(leg.from.lat, leg.from.lon));
+            }).hover(function(evt) {
+                this_.module.pathMarkerLayer.clearLayers();
+                this_.module.drawStartBubble(leg, true);            
+            }, function(evt) {
+                this_.module.pathMarkerLayer.clearLayers();
+                this_.module.drawAllStartBubbles(this_.itineraries[this_.activeIndex]);
+            });
 
             $('<div class="otp-itin-leg-elapsedDesc">Time in transit: '+otp.util.Time.msToHrMin(leg.duration)+'</div>').appendTo(legDiv);
 
+            if(this.module.showIntermediateStops) {
+                $('<div class="otp-itin-leg-intStopsHeader">'+leg.intermediateStops.length+' Intermediate Stops</div>').appendTo(legDiv);
+                var intStopsDiv = $('<div class="otp-itin-leg-intStopsList"></div>').appendTo(legDiv);
+                for(var i=0; i < leg.intermediateStops.length; i++) {
+                    var stop = leg.intermediateStops[i];
+                    $('<div class="otp-itin-leg-intStopsListItem">'+(i+1)+'. '+stop.name+' (ID #'+stop.stopId.id+')</div>').appendTo(intStopsDiv);
+                }
+            }
+
             $('<div class="otp-itin-leg-leftcol">'+otp.util.Time.formatItinTime(leg.endTime, "h:mma")+"</div>").appendTo(legDiv);
-            $('<div class="otp-itin-leg-endpointDesc"><b>Alight</b> at '+leg.to.name+'</div>').appendTo(legDiv);
+
+            $('<div class="otp-itin-leg-endpointDesc"><b>Alight</b> at '+leg.to.name+'</div>')
+            .appendTo(legDiv)
+            .click(function(evt) {
+                this_.module.webapp.map.lmap.panTo(new L.LatLng(leg.to.lat, leg.to.lon));
+            }).hover(function(evt) {
+                this_.module.pathMarkerLayer.clearLayers();
+                this_.module.drawEndBubble(leg, true);            
+            }, function(evt) {
+                this_.module.pathMarkerLayer.clearLayers();
+                this_.module.drawAllStartBubbles(this_.itineraries[this_.activeIndex]);
+            });
             
             return legDiv;
 
@@ -215,19 +247,37 @@ otp.widgets.ItinerariesWidget =
             
             for(var i=0; i<leg.steps.length; i++) {
                 var step = leg.steps[i];
+                var text = otp.util.Itin.getLegStepText(step);
                 
-                var html = '<div class="otp-itin-step-row">';
+                var html = '<div id="foo-'+i+'" class="otp-itin-step-row">';
                 html += '<div class="otp-itin-step-icon">';
-                if(step.relativeDirection) html += '<img src="images/directions/'+step.relativeDirection.toLowerCase()+'.png">';
+                if(step.relativeDirection)
+                    html += '<img src="images/directions/' +
+                        step.relativeDirection.toLowerCase()+'.png">';
                 html += '</div>';                
-                html += '<div class="otp-itin-step-text">'+otp.util.Itin.getLegStepText(step)+'</div>';
+                var distArr= otp.util.Itin.distanceString(step.distance).split(" ");
+                html += '<div class="otp-itin-step-dist">' +
+                    '<span style="font-weight:bold; font-size: 1.2em;">' + 
+                    distArr[0]+'</span><br>'+distArr[1]+'</div>';
+                html += '<div class="otp-itin-step-text">'+text+'</div>';
                 html += '<div style="clear:both;"></div></div>';
-                $(html).appendTo(legDiv).click(function(evt) {
-                    console.log("click");    
+
+                $(html).appendTo(legDiv)
+                .data("step", step)
+                .data("stepText", text)
+                .click(function(evt) {
+                    var step = $(this).data("step");
+                    this_.module.webapp.map.lmap.panTo(new L.LatLng(step.lat, step.lon));
                 }).hover(function(evt) {
-                    $(evt.delegateTarget).css('background', '#f0f0f0');
+                    var step = $(this).data("step");
+                    $(this).css('background', '#f0f0f0');
+                    var popup = L.popup()
+                        .setLatLng(new L.LatLng(step.lat, step.lon))
+                        .setContent($(this).data("stepText"))
+                        .openOn(this_.module.webapp.map.lmap);
                 }, function(evt) {
-                    $(evt.delegateTarget).css('background', '#e8e8e8');
+                    $(this).css('background', '#e8e8e8');
+                    this_.module.webapp.map.lmap.closePopup();
                 });
             }
             return legDiv;                        
