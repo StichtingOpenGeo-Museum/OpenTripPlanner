@@ -24,7 +24,6 @@ otp.config = {
     // OTP server address and routerId (if applicable)
     hostname : "http://opentripplanner.eu",
     routerId : "benelux",
-
     // Base map tiles settings:
     tileUrl : 'http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-streets/{z}/{x}/{y}.png',
     // overlayTileUrl : [link to tileset to overlay on base layer],
