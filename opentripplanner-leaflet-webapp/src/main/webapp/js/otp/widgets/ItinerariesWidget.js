@@ -35,7 +35,7 @@ otp.widgets.ItinerariesWidget =
         this.module = module;
         this.$().addClass('otp-itinsWidget');
         this.$().resizable();
-        this.header = $("<div>X Itineraries Returned:</div>").appendTo(this.$());
+        this.header = $("<div class='otp-widget-header'>X Itineraries Returned:</div>").appendTo(this.$());
     },
     
     activeItin : function() {
@@ -69,8 +69,11 @@ otp.widgets.ItinerariesWidget =
         }
         var html = "<div id='"+divId+"' class='otp-itinsAccord'></div>";
         this.itinsAccord = $(html).appendTo(this.$());
-        this.appendFooter();
-
+        
+        if(tripPlan.queryParams.mode !== "WALK" && tripPlan.queryParams.mode !== "BICYCLE") {
+            this.appendFooter();
+        }
+        
         for(var i=0; i<this.itineraries.length; i++) {
             var itin = this.itineraries[i];
             //$('<h3><span id='+divId+'-headerContent-'+i+'>'+this.headerContent(itin, i)+'<span></h3>').appendTo(this.itinsAccord).click(function(evt) {
@@ -189,7 +192,7 @@ otp.widgets.ItinerariesWidget =
         for(var l=0; l<itin.itinData.legs.length; l++) {
             var leg = itin.itinData.legs[l];
             var headerHtml = "<b>"+leg.mode+"</b>";
-            if(leg.mode === "WALK" || leg.mode === "BICYCLE") headerHtml += " to "+leg.to.name;
+            if(leg.mode === "WALK" || leg.mode === "BICYCLE") headerHtml += " "+otp.util.Itin.distanceString(leg.distance)+ " to "+leg.to.name;
             else if(leg.agencyId !== null) headerHtml += ": "+leg.agencyId+", ("+leg.route+") "+leg.routeLongName;
             $("<h3>"+headerHtml+"</h3>").appendTo(itinAccord).hover(function(evt) {
                 var arr = evt.target.id.split('-');
@@ -249,9 +252,9 @@ otp.widgets.ItinerariesWidget =
             .click(function(evt) {
                 var stopID = leg.from.stopId.id;
                 var times = this_.activeItin().stopTimesMap[stopID];
-                console.log("getting "+stopID);
-                console.log(times);
-                var stopsWidget = new otp.widgets.StopTimesWidget(this_.id+"-stopWidget-"+stopID, stopID, leg.routeShortName, times);
+                console.log(evt);
+                var stopsWidget = new otp.widgets.StopTimesWidget(this_.id+"-stopWidget-"+stopID, stopID, leg.routeShortName, times, leg.startTime);
+                stopsWidget.$().offset({top: evt.clientY, left: evt.clientX});
                 this_.module.addWidget(stopsWidget);
             });
 

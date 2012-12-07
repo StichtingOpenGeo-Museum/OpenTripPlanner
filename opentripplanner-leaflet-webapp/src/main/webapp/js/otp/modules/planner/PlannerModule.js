@@ -46,10 +46,13 @@ otp.modules.planner.PlannerModule =
     date                    : null,
     arriveBy                : false,
     mode                    : "TRANSIT,WALK",
+    maxWalkDistance         : 804.672, // 1/2 mi.
     optimize                : null,
     triangleTimeFactor      : 0.333,
     triangleSlopeFactor     : 0.333,
     triangleSafetyFactor    : 0.334,
+    
+    startTimePadding        : 0,
     
     // copy of query param set from last /plan request
     lastQueryParams : null,
@@ -196,12 +199,15 @@ otp.modules.planner.PlannerModule =
                 return;
             }
             
+            var addToStart = this.arriveBy ? 0 : this.startTimePadding;
        	    queryParams = {             
                 fromPlace: this.startLatLng.lat+','+this.startLatLng.lng,
                 toPlace: this.endLatLng.lat+','+this.endLatLng.lng,
                 time : (this.time) ? this.time : moment().format("h:mma"),
+                //time : (this.time) ? moment(this.time).add("s", addToStart).format("h:mma") : moment().add("s", addToStart).format("h:mma"),
                 date : (this.date) ? this.date : moment().format("MM-DD-YYYY"),
-                mode: this.mode
+                mode: this.mode,
+                maxWalkDistance: this.maxWalkDistance
             };
             if(this.arriveBy !== null) _.extend(queryParams, { arriveBy : this.arriveBy } );
             if(this.optimize !== null) _.extend(queryParams, { optimize : this.optimize } );

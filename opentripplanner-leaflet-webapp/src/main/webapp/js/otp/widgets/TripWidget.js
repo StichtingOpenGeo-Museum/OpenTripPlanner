@@ -161,10 +161,13 @@ otp.widgets.TW_ModeSelector =
     
     id           :  null,
 
-    modes        : { "TRANSIT,WALK" : "Walk to Transit", 
-                     "TRANSIT,BICYCLE" : "Bike to Transit", 
+    modes        : { "TRANSIT,WALK" : "Transit", 
+                     "BUSISH,WALK" : "Bus Only", 
+                     "TRAINISH,WALK" : "Rail Only", 
+                     "BICYCLE" : 'Bicycle Only',
                      "WALK" : 'Walk Only',
-                     "BICYCLE" : 'Bike Only' },
+                     "TRANSIT,BICYCLE" : "Bicycle &amp; Transit" 
+                   },
        
     initialize : function(tripWidget) {
         otp.widgets.TripWidgetPanel.prototype.initialize.apply(this, arguments);
@@ -186,6 +189,42 @@ otp.widgets.TW_ModeSelector =
         var this_ = this;
         $("#"+this.id).change(function() {
             this_.tripWidget.module.mode = _.keys(this_.modes)[this.selectedIndex];
+        });
+    },
+
+    restorePlan : function(data) {
+    }
+        
+});
+
+otp.widgets.TW_MaxWalkSelector = 
+    otp.Class(otp.widgets.TripWidgetPanel, {
+    
+    id           :  null,
+
+    values        : [0.1, 0.25, 0.5, 0.75, 1, 2, 3, 4, 5, 10, 15, 20, 30, 40, 50, 100],
+       
+    initialize : function(tripWidget) {
+        otp.widgets.TripWidgetPanel.prototype.initialize.apply(this, arguments);
+        this.id = tripWidget.id+"-maxWalkSelector";
+        
+        var html = "<div class='notDraggable'>Maximum walk: ";
+        html += '<select id="'+this.id+'">';
+        for(var i=0; i<this.values.length; i++) {
+            html += '<option'+(this.values[i] == .5 ? ' selected' : '')+'>'+this.values[i]+'</option>';            
+        }
+        html += '</select> mi.';
+        html += "</div>";
+              
+        $(html).appendTo(this.$());
+        //this.setContent(content);
+    },
+
+    doAfterLayout : function() {
+        var this_ = this;
+        $("#"+this.id).change(function() {
+            var m = this_.values[this.selectedIndex]*1609.34;
+            this_.tripWidget.module.maxWalkDistance = m;
         });
     },
 
@@ -358,7 +397,7 @@ otp.widgets.TW_Submit =
         otp.widgets.TripWidgetPanel.prototype.initialize.apply(this, arguments);
         this.id = tripWidget.id+"-submit";
 
-        $('<div class="notDraggable"><button id="'+this.id+'-button">Plan Trip</button></div>').appendTo(this.$());
+        $('<div class="notDraggable" style="text-align:center;"><button id="'+this.id+'-button">Plan Trip</button></div>').appendTo(this.$());
         //console.log(this.id+'-button')
         
     },

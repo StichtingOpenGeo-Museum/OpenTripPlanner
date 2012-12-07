@@ -491,6 +491,13 @@ body {
 	color: red;
 }
 
+.otp-widget-header {
+  font-size: 16px;
+  text-shadow: -1px 1px 0 #ffffff;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
 #otp-tripResultsWidget {
   width: 230px;
   height: auto;
@@ -579,6 +586,7 @@ body {
   bottom: auto;
   top: 3em;
   padding: 0.25em 0.5em;
+  z-index: 50;
 }
 
 .otp-defaultTripWidget hr {
@@ -642,9 +650,21 @@ h6.drag-to-change {
   top: 60px;
   left: 10px;
   width: 300px;
-  height: 250px;
+  height: 300px;
+  z-index: 5;
 }
 
+@media only screen and (min-width: 1024px) {
+  .otp-itinsWidget {
+    width: 450px;
+  }
+}
+
+@media only screen and (min-height: 768px) {
+  .otp-itinsWidget {
+    hieght: 350px;
+  }
+}
 
 .otp-itinsAccord {
   font-size: 12px;
@@ -851,8 +871,18 @@ h6.drag-to-change {
     overflow: auto;
     background: white;
     border: 1px solid black;
+    margin-top: 5px;
 }
 
+.otp-stopTimes-list-item {
+    margin: .2em 0 .2em .5em;
+}
+
+.otp-stopTimes-close {
+    text-align:center;
+    margin-top: 8px;
+    font-size: .8em;
+}
 
 /* Past Queries Widget */
 

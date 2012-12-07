@@ -33,13 +33,17 @@ otp.modules.multimodal.MultimodalPlannerModule =
         otp.modules.planner.PlannerModule.prototype.activate.apply(this);
 
         this.optionsWidget = new otp.widgets.TripWidget('otp-'+this.moduleId+'-optionsWidget', this);
+        this.optionsWidget.$().resizable();
         this.addWidget(this.optionsWidget);
         
+        this.optionsWidget.addHeader("Trip Options");
         this.optionsWidget.addPanel("time", new otp.widgets.TW_TimeSelector(this.optionsWidget));
         this.optionsWidget.addVerticalSpace(12);
         this.optionsWidget.addPanel("mode", new otp.widgets.TW_ModeSelector(this.optionsWidget));
         //this.optionsWidget.addVerticalSpace(12);
         //this.optionsWidget.addPanel("triangle", new otp.widgets.TW_BikeTriangle(this.optionsWidget));
+        this.optionsWidget.addVerticalSpace(12);
+        this.optionsWidget.addPanel("maxWalk", new otp.widgets.TW_MaxWalkSelector(this.optionsWidget));
         this.optionsWidget.addSeparator();
         this.optionsWidget.addPanel("submit", new otp.widgets.TW_Submit(this.optionsWidget));
     },
