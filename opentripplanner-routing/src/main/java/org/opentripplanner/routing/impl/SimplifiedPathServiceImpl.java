@@ -71,6 +71,10 @@ public class SimplifiedPathServiceImpl implements PathService {
             options.rctx.pathParsers = new PathParser[] { new Parser() };
         }
 
+        if (!options.getModes().isTransit()) {
+            return sptService.getShortestPathTree(options).getPaths();
+        }
+
         // ideally reset walk distance after initializing heuristic with specified maxWalk
         options.setMaxWalkDistance(Double.MAX_VALUE);
         LOG.debug("rreq={}", options);
