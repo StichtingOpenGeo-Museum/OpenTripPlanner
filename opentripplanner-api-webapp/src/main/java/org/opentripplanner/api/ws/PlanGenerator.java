@@ -230,7 +230,6 @@ public class PlanGenerator {
                         || mode == TraverseMode.STL) {
                     itinerary.waitingTime += dt;
                 } else if (mode.isOnStreetNonTransit()) {
-                    itinerary.walkDistance += backEdge.getDistance();
                     itinerary.walkTime += dt;
                 } else if (mode.isTransit()) {
                     itinerary.transitTime += dt;
@@ -630,6 +629,7 @@ public class PlanGenerator {
         itinerary.startTime = makeCalendar(startState);
         itinerary.endTime = makeCalendar(endState);
         itinerary.duration = endState.getTimeInMillis() - startState.getTimeInMillis();
+        itinerary.walkDistance = path.getWalkDistance();
 
         Graph graph = path.getRoutingContext().graph;
         FareService fareService = graph.getService(FareService.class);
