@@ -44,7 +44,7 @@ otp.widgets.ItinerariesWidget =
         return this.itineraries[this.activeIndex];
     },
     
-    updateItineraries : function(tripPlan) {
+    updateItineraries : function(tripPlan, itinIndex) {
         
         var this_ = this;
         var divId = this.id+"-itinsAccord";
@@ -98,9 +98,10 @@ otp.widgets.ItinerariesWidget =
             .appendTo(this.itinsAccord)
             .append(this.renderItinerary(itin, i));
         }
-        this.activeIndex = 0;
+        this.activeIndex = parseInt(itinIndex) || 0;
         
         this.itinsAccord.accordion({
+            active: this.activeIndex,
             heightStyle: "fill"
         });
         
@@ -226,7 +227,20 @@ otp.widgets.ItinerariesWidget =
         itinDiv.append(itinAccord);
         itinDiv.append("<div class='otp-itinEndRow'><b>End</b>: "+itin.getEndTimeStr()+"</div>");
 
-        // TODO: add trip summary
+        // add trip summary
+        
+        var html = '<div class="otp-itinTripSummary">';
+        html += '<div class="otp-itinTripSummaryHeader">Trip Summary</div>';
+        html += '<div class="otp-itinTripSummaryLabel">Travel</div><div class="otp-itinTripSummaryText">'+itin.getStartTimeStr()+'</div>';
+        html += '<div class="otp-itinTripSummaryLabel">Time</div><div class="otp-itinTripSummaryText">'+itin.getDurationStr()+'</div>';
+        if(itin.hasTransit) {
+            html += '<div class="otp-itinTripSummaryLabel">Transfers</div><div class="otp-itinTripSummaryText">'+itin.itinData.transfers+'</div>';
+            html += '<div class="otp-itinTripSummaryLabel">Fare</div><div class="otp-itinTripSummaryText">'+itin.getFareStr()+'</div>';
+        }
+        html += '<div class="otp-itinTripSummaryFooter">Valid ' + moment().format('MMM Do YYYY, h:mma') + ' | <a href="'+itin.getLink(i)+'">Link to Itinerary</a></div>';
+        
+        html += '</div>';
+        itinDiv.append(html);
         
         return itinDiv;
     },

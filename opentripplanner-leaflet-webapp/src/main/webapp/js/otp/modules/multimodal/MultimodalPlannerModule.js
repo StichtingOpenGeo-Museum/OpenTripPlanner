@@ -59,9 +59,17 @@ otp.modules.multimodal.MultimodalPlannerModule =
             this.itinWidget = new otp.widgets.ItinerariesWidget(this.moduleId+"-itinWidget", this);
             this.widgets.push(this.itinWidget);
         }
-        this.itinWidget.updateItineraries(tripPlan);
+        if(restoring && this.restoredItinIndex) {
+            this.itinWidget.updateItineraries(tripPlan, this.restoredItinIndex);
+            this.restoredItinIndex = null;
+        } else  {
+            this.itinWidget.updateItineraries(tripPlan);
+        }
         this.itinWidget.show();
         
+        if(restoring) {
+            this.optionsWidget.restorePlan(tripPlan);
+        }
         this.drawItinerary(tripPlan.itineraries[0]);
     },
     
