@@ -57,7 +57,7 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
                 
         /* PEDESTRIAN_AND_BICYCLE */
         setProperties(props, "highway=cycleway", 
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.68, 0.68);
+            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.60, 0.60);
         setProperties(props, "highway=path", 
             StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.75, 0.75);
         setProperties(props, "highway=pedestrian", 
@@ -198,13 +198,13 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
 
         /* cycleway=track */
         setProperties(props, "highway=*;cycleway=track", 
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.73, 0.73);
+            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.75, 0.75);
         setProperties(props, "highway=service;cycleway=track", 
-            StreetTraversalPermission.ALL, 0.7, 0.7);
+            StreetTraversalPermission.ALL, 0.65, 0.65);
         setProperties(props, "highway=residential;cycleway=track", 
-            StreetTraversalPermission.ALL, 0.7, 0.7);
+            StreetTraversalPermission.ALL, 0.65, 0.65);
         setProperties(props, "highway=residential_link;cycleway=track", 
-            StreetTraversalPermission.ALL, 0.7, 0.7);
+            StreetTraversalPermission.ALL, 0.65, 0.65);
         setProperties(props, "highway=tertiary;cycleway=track", 
             StreetTraversalPermission.ALL, 0.75, 0.75);
         setProperties(props, "highway=tertiary_link;cycleway=track", 
@@ -218,19 +218,19 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
         setProperties(props, "highway=primary_link;cycleway=track", 
             StreetTraversalPermission.ALL, 0.85, 0.85);
         setProperties(props, "highway=trunk;cycleway=track", 
-            StreetTraversalPermission.BICYCLE_AND_CAR, 0.9, 0.9);
+            StreetTraversalPermission.BICYCLE_AND_CAR, 0.95, 0.95);
         setProperties(props, "highway=trunk_link;cycleway=track", 
             StreetTraversalPermission.BICYCLE_AND_CAR, 0.85, 0.85);
 
         /* cycleway=opposite_track */
         setProperties(props, "highway=*;cycleway=opposite_track", 
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 1.0, 0.73);
+            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 1.0, 0.75);
         setProperties(props, "highway=service;cycleway=opposite_track",
-            StreetTraversalPermission.ALL, 1.1, 0.7);
+            StreetTraversalPermission.ALL, 1.1, 0.65);
         setProperties(props, "highway=residential;cycleway=opposite_track",
-            StreetTraversalPermission.ALL, 0.98, 0.7);
+            StreetTraversalPermission.ALL, 0.98, 0.65);
         setProperties(props, "highway=residential_link;cycleway=opposite_track",
-            StreetTraversalPermission.ALL, 0.98, 0.7);
+            StreetTraversalPermission.ALL, 0.98, 0.65);
         setProperties(props, "highway=tertiary;cycleway=opposite_track",
             StreetTraversalPermission.ALL, 1, 0.75);
         setProperties(props, "highway=tertiary_link;cycleway=opposite_track",
@@ -244,7 +244,7 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
         setProperties(props, "highway=primary_link;cycleway=opposite_track",
             StreetTraversalPermission.ALL, 2.06, 0.85);
         setProperties(props, "highway=trunk;cycleway=opposite_track",
-            StreetTraversalPermission.BICYCLE_AND_CAR, 7.47, 0.9);
+            StreetTraversalPermission.BICYCLE_AND_CAR, 7.47, 0.95);
         setProperties(props, "highway=trunk_link;cycleway=opposite_track",
             StreetTraversalPermission.BICYCLE_AND_CAR, 2.06, 0.85);
 
@@ -292,18 +292,18 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
         setProperties(props, "highway=primary_link;cycleway=opposite", 
             StreetTraversalPermission.ALL, 2.06, 2.99);
                         
-        /* path */
+        /* path designed for bicycles (should be treated exactly as a cycleway is), this is a 
+           multi-use path (MUP)*/
         setProperties(props, "highway=path;bicycle=designated",
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.68, 0.68);
+            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.60, 0.60);
 
-        /* footway */
+        /* special cases for footway, pedestrian and bicycles */
         setProperties(props, "highway=footway;bicycle=designated",
+            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.75, 0.75);
+        setProperties(props, "highway=footway;bicycle=yes;area=yes",
+            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.9, 0.9);
+        setProperties(props, "highway=pedestrian;bicycle=designated",
             StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.75, 0.75);     
-        /* Portland area specific tags */
-        setProperties(props, "highway=footway;RLIS:bicycle=designated",
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.77, 0.77);
-        setProperties(props, "highway=footway;CCGIS:bicycle=designated",
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 0.77, 0.77);
 
         /* sidewalk and crosswalk */
         setProperties(props, "footway=sidewalk;highway=footway;bicycle=yes",
@@ -314,11 +314,7 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
             StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 2.5, 2.5);
         setProperties(props, "highway=footway;footway=crossing;bicycle=designated",
             StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 1.1, 1.1);
-        /* Portland area specific tags */
-        setProperties(props, "footway=sidewalk;highway=footway;RLIS:bicycle=designated",
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 1, 1);
-        setProperties(props, "footway=sidewalk;highway=footway;CCGIS:bicycle=designated",
-            StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 1, 1);
+        
 
         /* bicycles on tracks (tracks are defined in OSM as: Roads for agricultural use, gravel roads in the 
            forest etc.; usually unpaved/unsealed but may occasionally apply to paved tracks as well.)  */
@@ -416,27 +412,31 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
         
         /* surface=* mixins */
 
-        /* sand and fine gravel are deadly for bikes */
-        setProperties(props, "surface=fine_gravel", 
-            StreetTraversalPermission.ALL, 100.0, 100.0, true);
-        setProperties(props, "surface=sand", 
-            StreetTraversalPermission.ALL, 100.0, 100.0, true);
+       /* The following tags have been removed from surface weights because they are no
+        * more of an impedence to bicycling than a paved surface
+        * surface=paving_stones
+        * surface=fine_gravel (sounds counter-intuitive but see the definition on the OSM Wiki)
+        * surface=tartan (this what running tracks are usually made of)
+        */
 
-        /* unpaved, etc */
         setProperties(props, "surface=unpaved", 
             StreetTraversalPermission.ALL, 1.18, 1.18, true);
         setProperties(props, "surface=compacted", 
             StreetTraversalPermission.ALL, 1.18, 1.18, true);
+        setProperties(props, "surface=wood", 
+            StreetTraversalPermission.ALL, 1.18, 1.18, true);
+        
         setProperties(props, "surface=cobblestone", 
-            StreetTraversalPermission.ALL, 1.5, 1.5, true);
-        setProperties(props, "surface=paving_stones", 
-            StreetTraversalPermission.ALL, 1.5, 1.5, true);
+            StreetTraversalPermission.ALL, 1.3, 1.3, true);
+        setProperties(props, "surface=cobblestone:flattened", 
+            StreetTraversalPermission.ALL, 1.3, 1.3, true);
         setProperties(props, "surface=grass_paver", 
-            StreetTraversalPermission.ALL, 1.5, 1.5, true);
+            StreetTraversalPermission.ALL, 1.3, 1.3, true);
         setProperties(props, "surface=pebblestone", 
-            StreetTraversalPermission.ALL, 1.5, 1.5, true);
-        setProperties(props, "surface=gravel",
-            StreetTraversalPermission.ALL, 1.5, 1.5, true);
+            StreetTraversalPermission.ALL, 1.3, 1.3, true);   
+        // Can be slick if wet, but otherwise not unfavorable to bikes
+        setProperties(props, "surface=metal", 
+            StreetTraversalPermission.ALL, 1.3, 1.3, true);
         setProperties(props, "surface=ground", 
             StreetTraversalPermission.ALL, 1.5, 1.5, true);
         setProperties(props, "surface=dirt", 
@@ -447,16 +447,16 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
             StreetTraversalPermission.ALL, 1.5, 1.5, true);
         setProperties(props, "surface=mud", 
             StreetTraversalPermission.ALL, 1.5, 1.5, true);
-        setProperties(props, "surface=wood", 
+        setProperties(props, "surface=woodchip", 
             StreetTraversalPermission.ALL, 1.5, 1.5, true);
-        setProperties(props, "surface=metal", 
+        setProperties(props, "surface=gravel",
             StreetTraversalPermission.ALL, 1.5, 1.5, true);
         setProperties(props, "surface=artifical_turf", 
             StreetTraversalPermission.ALL, 1.5, 1.5, true);
-                        
-        // it is extremly unsafe to ride directly on the Scotsman
-        setProperties(props, "surface=tartan", 
-            StreetTraversalPermission.ALL, 3.0, 3.0, true);
+        
+        /* sand is deadly for bikes */       
+        setProperties(props, "surface=sand", 
+            StreetTraversalPermission.ALL, 100.0, 100.0, true);     
         
         /* Portland-local mixins */
         

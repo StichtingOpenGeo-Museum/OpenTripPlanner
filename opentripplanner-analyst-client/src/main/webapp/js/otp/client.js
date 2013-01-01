@@ -15,15 +15,20 @@
 var INIT_LOCATION = new L.LatLng(52.374004,4.890359); // Amsterdam
 var AUTO_CENTER_MAP = false;
 var ROUTER_ID = "";
+var MSEC_PER_HOUR = 60 * 60 * 1000;
+var MSEC_PER_DAY = MSEC_PER_HOUR * 24;
+// Note: time zone does not matter since we are turning this back into text before sending it
+var BASE_DATE_MSEC = new Date().getTime() - new Date().getTime() % MSEC_PER_DAY; 
+// var BASE_DATE_MSEC = Date.parse('2012-11-15');
+
 
 var map = new L.Map('map', {
 	minZoom : 7,
 	maxZoom : 17,
 	// what we really need is a fade transition between old and new tiles without removing the old ones
-	//fadeAnimation: false
 });
 
-var mapboxURL = "http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-streets/{z}/{x}/{y}.png";
+var mapboxURL = "http://{s}.tiles.mapbox.com/v3/mapbox.mapbox-light/{z}/{x}/{y}.png";
 var OSMURL    = "http://{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png";
 var aerialURL = "http://{s}.mqcdn.com/naip/{z}/{x}/{y}.png";
 
@@ -40,14 +45,7 @@ var aerialLayer = new L.TileLayer(aerialURL,
 
 var flags = {
 	twoEndpoint: false,
-    startTime: 'none',
-    endTime: 'none'
-};
-
-var params = {
-    layers: 'traveltime',
-    styles: 'mask',
-    batch: true,
+	twoSearch: false
 };
 
 // convert a map of query parameters into a query string, 
@@ -71,34 +69,7 @@ var buildQuery = function(params) {
 };
 
 var analystUrl = "/opentripplanner-api-webapp/ws/tile/{z}/{x}/{y}.png"; 
-var analystLayer = new L.TileLayer(analystUrl + buildQuery(params), {attribution: osmAttrib});
-
-var refresh = function () {
-	var o = origMarker.getLatLng();
-	var d = destMarker.getLatLng();
-	console.log(flags);
-    if (flags.twoEndpoint) {
-    	params.fromPlace = [o.lat + "," + o.lng, d.lat + "," + d.lng];
-    	// toPlace is not currently used, but must be provided to avoid missing vertex error
-    	// missing to place should be tolerated in batch mode
-    	params.toPlace = [d.lat + "," + d.lng, o.lat + "," + o.lng];
-    	map.addLayer(destMarker);
-    } else {
-    	params.fromPlace = o.lat + "," + o.lng;
-    	// toPlace is not currently used, but must be provided to avoid missing vertex error
-    	params.toPlace = d.lat + "," + d.lng;
-    	map.removeLayer(destMarker);
-    }
-    console.log(params);
-    console.log(analystUrl + buildQuery(params));
-    // can we trigger refresh instead of removing?
-	if (analystLayer != null)
-		map.removeLayer(analystLayer);
-	analystLayer._url = analystUrl + buildQuery(params);
-    map.addLayer(analystLayer);
-	legend.src = "/opentripplanner-api-webapp/ws/legend.png?width=300&height=40&styles=" 
-		+ params.styles;
-};
+var analystLayer = new L.TileLayer(analystUrl, {attribution: osmAttrib});
 
 // create geoJSON layers for DC Purple Line
 
@@ -135,6 +106,7 @@ var purpleLineStopsFeature = {
 	    }	
 	}
 };
+
 var geojsonMarkerOptions = {
 		radius: 4,
 		fillColor: "#000",
@@ -143,6 +115,7 @@ var geojsonMarkerOptions = {
 		opacity: 0,
 		fillOpacity: 0.8
 };
+
 var purpleLineStopsLayer = new L.GeoJSON(purpleLineStopsFeature, {
 	pointToLayer: function (latlng) { 
 		return new L.CircleMarker(latlng, geojsonMarkerOptions);
@@ -199,26 +172,22 @@ if (AUTO_CENTER_MAP) {
 }
 map.setView(initLocation, 12);
 var initLocation2 = new L.LatLng(initLocation.lat + 0.05, initLocation.lng + 0.05);
-console.log(initLocation, initLocation2);
-var greenMarkerIcon = new L.Icon({
-    iconUrl: 'js/lib/leaflet/images/marker-green.png',
-});
-var redMarkerIcon = new L.Icon({
-    iconUrl: 'js/lib/leaflet/images/marker-red.png',
-});
+
+//Marker icons
+
+var greenMarkerIcon = new L.Icon({ iconUrl: 'js/lib/leaflet/images/marker-green.png' });
+var redMarkerIcon = new L.Icon({ iconUrl: 'js/lib/leaflet/images/marker-red.png' });
 var origMarker = new L.Marker(initLocation,  {draggable: true, icon: greenMarkerIcon });
 var destMarker = new L.Marker(initLocation2, {draggable: true, icon: redMarkerIcon });
-origMarker.on('dragend', refresh);
-origMarker.bindPopup("I am the origin.");
-destMarker.on('dragend', refresh);
-destMarker.bindPopup("I am the destination.");
+origMarker.on('dragend', mapSetupTool);
+destMarker.on('dragend', mapSetupTool);
+
+// add layers to map 
+// do not add analyst layer yet -- it will be added in refresh() once params are pulled in
 
 map.addLayer(mapboxLayer);
 map.addLayer(origMarker);
-// do not add analyst layer yet -- it will be added in refresh() once params are pulled in
-
-var layersControl = new L.Control.Layers(baseMaps, overlayMaps);
-map.addControl(layersControl);
+map.addControl(new L.Control.Layers(baseMaps, overlayMaps));
 
 // tools
 
@@ -232,65 +201,78 @@ var purpleOff = function () {
     refresh();
 };
 
-var color30 = function () {
-	params.layers = 'traveltime',
-	params.styles = 'color30',
-    params.time = flags.startTime;
-	flags.twoEndpoint = false;
-    refresh();
-};
+// use function statement rather than expression to allow hoisting -- is there a better way?
+function mapSetupTool() {
 
-var gray = function () {
-	params.layers = 'traveltime',
-	params.styles = 'mask',
-    params.time = flags.startTime;
-	flags.twoEndpoint = false;
-    refresh();
-};
+	var params = { 
+		batch: true
+		//bannedRoutes = ["", "Test_Purple"];
+	};
 
-var difference = function () {
-	params.layers = 'difference',
-	params.styles = 'difference',
-    params.bannedRoutes = ["", "Test_Purple"];
-    params.time = flags.startTime;
-	flags.twoEndpoint = false;
-    refresh();
-};
+	// pull search parameters from form
+	switch($('#searchTypeSelect').val()) {
+	case 'single':
+		params.layers = 'traveltime';
+		params.styles = 'color30';
+		break;
+	case 'ppa':
+		params.layers = 'hagerstrand';
+		params.styles = 'transparent';
+		break;
+	case 'diff2':
+		params.layers = 'difference';
+		params.styles = 'difference';
+		break;
+	case 'diff1':
+		params.layers = 'difference';
+		params.styles = 'difference';
+		break;
+	}
+	params.time = [$('#setupTime').val()];
+	params.mode = [$('#setupMode').val()];
+	params.maxWalkDistance = [$('#setupMaxDistance').val()];
+	params.arriveBy = [$('#arriveByA').val()];
 
-var hagerstrand = function () {
-	params.layers = 'hagerstrand',
-	params.styles = 'transparent',
-    params.bannedRoutes = "";
-	params.time = [flags.startTime, flags.endTime],
-	flags.twoEndpoint = true;
-    refresh();
-};
+	if (flags.twoSearch) {
+		var pushIfDifferent = function (elementId, paramName) {
+			console.log(elementId);
+			var elemval = document.getElementById(elementId).value;
+			if (elemval != 'same') {
+				params[paramName].push(elemval);
+			}
+		};
+		var args = [['setupTime2', 'time'],
+		            ['setupMode2', 'mode'],
+		            ['setupMaxDistance2', 'maxWalkDistance'],
+		            ['arriveByB', 'arriveBy']];
+		for (i in args) {
+			pushIfDifferent.apply(this, args[i]);
+		}
+	}
+    
+    // get origin and destination coordinate from map markers
+	var o = origMarker.getLatLng();
+	params.fromPlace = [o.lat + ',' + o.lng];
+    if (flags.twoEndpoint) {
+    	var d = destMarker.getLatLng();
+    	params.fromPlace.push(d.lat + ',' + d.lng);
+    }
+	// set from and to places to the same string(s) so they work for both arriveBy and departAfter
+	params.toPlace = params.fromPlace;
+    	
+    var URL = analystUrl + buildQuery(params);
+    console.log(params);
+    console.log(URL);
+    
+    // is there a better way to trigger a refresh than removing and re-adding?
+	if (analystLayer != null)
+		map.removeLayer(analystLayer);
+	analystLayer._url = URL;
+    map.addLayer(analystLayer);
+	legend.src = "/opentripplanner-api-webapp/ws/legend.png?width=300&height=40&styles=" 
+		+ params.styles;
 
-var mapSetupTool = function () {
-    var o = document.getElementById('setupTime').value;
-    if (o != '')
-        flags.startTime = o;
-
-    var d = document.getElementById('setupTime2').value;
-    if (d != '')
-        flags.endTime = d;
-
-    var m = document.getElementById('setupMode').value;
-    if (m != '')
-        params.mode = m;
-
-    var maxD = document.getElementById('setupMaxDistance').value;
-    if (maxD != '')
-        params.maxWalkDistance = maxD;
-
-    // set time
-    if (flags.twoEndpoint)
-        params.time = [flags.startTime, flags.endTime];
-    else
-        params.time = flags.startTime;
-
-    refresh();
-    return false;
+	return false;
 };     
 
 var downloadTool = function () { 
@@ -346,18 +328,86 @@ var downloadTool = function () {
     return false;
 };
 
-// read setup values from map setup tool on page load
-mapSetupTool();
+var displayTimes = function(fractionalHours, fractionalHoursOffset) {
+	console.log("fhour", fractionalHours);
+	// console.log("offset", fractionalHoursOffset);
+	var msec = BASE_DATE_MSEC + fractionalHours * MSEC_PER_HOUR; 
+	document.getElementById('setupTime').value = new Date(msec).toISOString().substring(0,19);
+	msec += fractionalHoursOffset * MSEC_PER_HOUR; 
+	document.getElementById('setupTime2').value = new Date(msec).toISOString().substring(0,19);
+};
 
-var baseDate = Date.parse("2012-06-06"); 
-var msecPerHour = 60 * 60 * 1000;
-var setOriginTime = function(fractionalHours) {
-	var seconds = baseDate + fractionalHours * msecPerHour; 
-	setupTime.value = new Date(seconds).toISOString().substring(0,19);
-	setDestinationTime(setupRelativeTime2.value);
-};
-var setDestinationTime = function(fractionalHours) {
-	var seconds = Date.parse(setupTime.value) + fractionalHours * msecPerHour; 
-	setupTime2.value = new Date(seconds).toISOString().substring(0,19);
-};
+function setFormDisabled(formName, disabled) {
+	var form = document.forms[formName];
+    var limit = form.elements.length;
+    var i;
+    for (i=0;i<limit;i++) {
+    	console.log('   ', form.elements[i], disabled);
+        form.elements[i].disabled = disabled;
+    }
+}
+
+
+/* Bind JS functions to events (handle almost everything at the form level) */
+
+// anytime a form element changes, refresh the map
+$('#searchTypeForm').change( mapSetupTool );
+
+// intercept slider change event bubbling to avoid frequent map rendering
+(function(slider, offset) {
+    slider.bind('change', function() {
+    	displayTimes(slider.val(), offset.val()); 
+        return false; // block event propagation
+    }).change();
+    slider.bind('mouseup', function() {
+    	slider.parent().trigger('change');
+    });
+    offset.bind('change', function() {
+    	displayTimes(slider.val(), offset.val()); 
+    });
+}) ($("#timeSlider"), $('#setupRelativeTime2'));
+
+//hide some UI elements when they are irrelevant
+$('#searchTypeSelect').change( function() { 
+	var type = this.value;
+	console.log('search type changed to', type);
+	if (type == 'single' || type == 'diff1') {
+		// switch to or stay in one-endpoint mode
+		map.removeLayer(destMarker);
+		flags.twoEndpoint = false;
+	} else { 
+		if (!(flags.twoEndpoint)) { 
+			// switch from one-endpoint to two-endpoint mode
+			var llo = origMarker.getLatLng();
+			var lld = destMarker.getLatLng();
+			lld.lat = llo.lat;
+			lld.lng = llo.lng + 0.02;
+			map.addLayer(destMarker);
+			flags.twoEndpoint = true;
+		}
+	}
+	if (type == 'single') {
+		$('.secondaryControl').fadeOut( 500 );
+		flags.twoSearch = false;
+	} else { 
+		$('.secondaryControl').fadeIn( 500 );
+		flags.twoSearch = true;
+	}
+	if (type == 'ppa') {
+		// lock arriveBy selectors and rename endpoints
+		$('#headerA').text('Origin Setup');
+		$('#headerB').text('Destination Setup');
+		$('#arriveByA').val('false').prop('disabled', true);
+		$('#arriveByB').val('true').prop('disabled', true);
+	} else {
+		$('#arriveByA').prop('disabled', false);
+		$('#arriveByB').prop('disabled', false);
+		if (type == 'single') {
+			$('#headerA').text('Search Setup');
+		} else {
+			$('#headerA').text('Search A Setup');
+			$('#headerB').text('Search B Setup');
+		}
+	}
+}).change(); // trigger this event (and implicitly a form change event) immediately upon binding
 

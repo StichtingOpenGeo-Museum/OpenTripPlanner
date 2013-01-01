@@ -120,6 +120,7 @@ public class Raptor implements PathService {
         //also fall back to A* for short trips
         double distance = distanceLibrary.distance(options.rctx.origin.getCoordinate(), options.rctx.target.getCoordinate());
         if (distance < shortPathCutoff) {
+            log.debug("Falling back to A* for very short path");
             return shortPathService.getPaths(options);
         }
 
@@ -231,6 +232,7 @@ public class Raptor implements PathService {
                     break;
                 }
                 options = options.clone();
+                walkOptions = walkOptions.clone();
                 if (search.getTargetStates().size() > 0 && bestElapsedTime < expectedWorstTime) {
                     // we have found some paths so we no longer want to expand the max walk distance
                     break RETRY;
@@ -247,9 +249,10 @@ public class Raptor implements PathService {
                     && initialWalk < Double.MAX_VALUE);
 
             options = options.clone();
+            walkOptions = walkOptions.clone();
             for (RaptorState state : search.getTargetStates()) {
                 for (AgencyAndId trip : state.getTrips()) {
-                    options.bannedTrips.add(trip);
+                    options.banTrip(trip);
                 }
             }
 
@@ -257,6 +260,7 @@ public class Raptor implements PathService {
                 break; // no paths found; searching more won't help
 
             options.setMaxWalkDistance(firstWalkDistance);
+            walkOptions.setMaxWalkDistance(firstWalkDistance);
 
             targetStates.addAll(search.getTargetStates());
             search = new RaptorSearch(data, options);
@@ -363,6 +367,7 @@ public class Raptor implements PathService {
 
         double walkDistance = options.getMaxWalkDistance();
         options = options.clone();
+        walkOptions = walkOptions.clone();
         if (walkDistance > 4000) {
             // this is a really long walk. We'll almost never actually need this. So let's do our
             // preliminary search over just 4km first.
@@ -477,16 +482,22 @@ public class Raptor implements PathService {
             RaptorState cur = states.get(i);
             if (cur.walkPath != null) { //a walking step
                 GraphPath path = new GraphPath(cur.walkPath, false);
+                Edge edge0 = path.edges.getFirst();
+                if (edge0.getFromVertex() != state.getVertex()) {
+                    state = state.getBackState();
+                }
                 for (Edge e : path.edges) {
-                    State oldState = state;
                     state = e.traverse(state);
-                    if (state == null) {
-                        e.traverse(oldState);
-                    }
                 }
             } else {
                 // so, cur is at this point at a transit stop; we have a route to board
                 if (cur.getParent() == null || ! cur.getParent().interlining) {
+                    for (Edge e : state.getVertex().getOutgoing()) {
+                        if (e instanceof PreAlightEdge) {
+                            state = e.traverse(state);
+                            break;
+                        }
+                    }
                     for (Edge e : state.getVertex().getOutgoing()) {
                         if (e instanceof PreBoardEdge) {
                             state = e.traverse(state);
@@ -551,16 +562,17 @@ public class Raptor implements PathService {
             RaptorState cur = states.get(i);
             if (cur.walkPath != null) {
                 GraphPath path = new GraphPath(cur.walkPath, false);
+                Edge edge0 = path.edges.getLast();
+                if (edge0.getToVertex() != state.getVertex()) {
+                    state = state.getBackState();
+                }
+
                 for (ListIterator<Edge> it = path.edges.listIterator(path.edges.size()); it.hasPrevious();) {
                     Edge e = it.previous();
-                    State oldState = state;
                     state = e.traverse(state);
-                    if (state == null) {
-                        e.traverse(oldState);
-                    }
                 }
             } else {
-                // so, cur is at this point at a transit stop; we have a route to alight from
+                // so, cur is at this point at a transit stop departure; we have a route to alight from
                 if (cur.getParent() == null || ! cur.getParent().interlining) {
                     for (Edge e : state.getVertex().getIncoming()) {
                         if (e instanceof PreAlightEdge) {
@@ -568,11 +580,7 @@ public class Raptor implements PathService {
                         }
                     }
                     TransitBoardAlight alight = cur.getRoute().alights[cur.boardStopSequence - 1][cur.patternIndex];
-                    State oldState = state;
                     state = alight.traverse(state);
-                    if (state == null) {
-                        state = alight.traverse(oldState);
-                    }
                 }
                 // now traverse the hops and dwells until we find the board we're looking for
                 HOP: while (true) {

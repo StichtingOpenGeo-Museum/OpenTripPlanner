@@ -183,7 +183,7 @@ class InterlineSwitchoverKey {
 }
 
 class IndexedLineSegment {
-    private static final double RADIUS = SphericalDistanceLibrary.RADIUS_OF_EARTH_IN_KM * 1000;
+    private static final double RADIUS = SphericalDistanceLibrary.RADIUS_OF_EARTH_IN_M;
     int index;
     Coordinate start;
     Coordinate end;
@@ -960,9 +960,9 @@ public class GTFSPatternHopFactory {
             Vertex fromVertex = context.stopNodes.get(pathway.getFromStop());
             Vertex toVertex = context.stopNodes.get(pathway.getToStop());
             if (pathway.isWheelchairTraversalTimeSet()) {
-                new PathwayEdge(fromVertex, toVertex, pathway.getTraversalTime());
-            } else {
                 new PathwayEdge(fromVertex, toVertex, pathway.getTraversalTime(), pathway.getWheelchairTraversalTime());
+            } else {
+                new PathwayEdge(fromVertex, toVertex, pathway.getTraversalTime());
             }
         }
     }
@@ -1539,12 +1539,11 @@ public class GTFSPatternHopFactory {
             int type = transfer.getTransferType();
             if (type == 3)
                 continue;
-
+            if (transfer.getFromStop().equals(transfer.getToStop())) {
+                continue;
+            }
             Vertex fromv = context.stopArriveNodes.get(transfer.getFromStop());
             Vertex tov = context.stopDepartNodes.get(transfer.getToStop());
-
-            if (fromv.equals(tov))
-                continue;
 
             double distance = distanceLibrary.distance(fromv.getCoordinate(), tov.getCoordinate());
             int time;

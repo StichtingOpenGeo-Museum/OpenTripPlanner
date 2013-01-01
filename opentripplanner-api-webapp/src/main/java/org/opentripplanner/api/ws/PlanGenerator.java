@@ -37,6 +37,7 @@ import org.opentripplanner.routing.core.RoutingContext;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
+import org.opentripplanner.routing.edgetype.AreaEdge;
 import org.opentripplanner.routing.edgetype.DwellEdge;
 import org.opentripplanner.routing.edgetype.EdgeWithElevation;
 import org.opentripplanner.routing.edgetype.ElevatorAlightEdge;
@@ -45,6 +46,7 @@ import org.opentripplanner.routing.edgetype.ElevatorEdge;
 import org.opentripplanner.routing.edgetype.FreeEdge;
 import org.opentripplanner.routing.edgetype.HopEdge;
 import org.opentripplanner.routing.edgetype.LegSwitchingEdge;
+import org.opentripplanner.routing.edgetype.OnBoardForwardEdge;
 import org.opentripplanner.routing.edgetype.PlainStreetEdge;
 import org.opentripplanner.routing.edgetype.PreAlightEdge;
 import org.opentripplanner.routing.edgetype.PreBoardEdge;
@@ -224,7 +226,6 @@ public class PlanGenerator {
                         || mode == TraverseMode.STL) {
                     itinerary.waitingTime += dt;
                 } else if (mode.isOnStreetNonTransit()) {
-                    itinerary.walkDistance += backEdge.getDistance();
                     itinerary.walkTime += dt;
                 } else if (mode.isTransit()) {
                     itinerary.transitTime += dt;
@@ -280,7 +281,7 @@ public class PlanGenerator {
                     coordinates = new CoordinateArrayListSequence();
                     coordinates.add(state.getBackState().getVertex().getCoordinate());
                     coordinates.add(state.getVertex().getCoordinate());
-                    finalizeLeg(leg, state, path.states, i, i, coordinates, null);
+                    finalizeLeg(leg, state, path.states, i, i, coordinates, itinerary);
                     coordinates.clear();
                 } else {
                     LOG.error("Unexpected state (in START): " + mode);
@@ -392,6 +393,7 @@ public class PlanGenerator {
                         LOG.error("leg unexpectedly not null (boarding loop)");
                     } else {
                         leg = makeLeg(itinerary, state);
+                        leg.from.stopIndex = ((OnBoardForwardEdge)backEdge).getStopIndex();
                         leg.stop = new ArrayList<Place>();
                         itinerary.transfers++;
                         leg.boardRule = (String) state.getExtension("boardAlightRule");
@@ -623,6 +625,7 @@ public class PlanGenerator {
         itinerary.startTime = makeCalendar(startState);
         itinerary.endTime = makeCalendar(endState);
         itinerary.duration = endState.getTimeInMillis() - startState.getTimeInMillis();
+        itinerary.walkDistance = path.getWalkDistance();
 
         Graph graph = path.getRoutingContext().graph;
         FareService fareService = graph.getService(FareService.class);
@@ -651,6 +654,10 @@ public class PlanGenerator {
 
         if (v instanceof TransitVertex) {
             TransitVertex transitVertex = (TransitVertex) v;
+            Edge backEdge = state.getBackEdge();
+            if (backEdge instanceof OnBoardForwardEdge) {
+                place.stopIndex = ((OnBoardForwardEdge)backEdge).getStopIndex() + 1;
+            }
             place.stopId = transitVertex.getStopId();
             place.stopCode = transitVertex.getStopCode();
             place.zoneId = state.getZone();
@@ -957,6 +964,9 @@ public class PlanGenerator {
         step.bogusName = en.hasBogusName();
         step.addAlerts(s.getBackAlerts());
         step.angle = DirectionUtils.getFirstAngle(s.getBackEdge().getGeometry());
+        if (s.getBackEdge() instanceof AreaEdge) {
+            step.area = true;
+        }
         return step;
     }
 

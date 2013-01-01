@@ -1,3 +1,16 @@
+/* This program is free software: you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public License
+ as published by the Free Software Foundation, either version 3 of
+ the License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+
 package org.opentripplanner.graph_builder.impl.raptor;
 
 import java.util.ArrayList;
@@ -57,6 +70,8 @@ import org.opentripplanner.routing.transit_index.RouteSegment;
 import org.opentripplanner.routing.transit_index.RouteVariant;
 import org.opentripplanner.routing.vertextype.OnboardVertex;
 import org.opentripplanner.routing.vertextype.TransitStop;
+import org.opentripplanner.routing.vertextype.TransitStopArrive;
+import org.opentripplanner.routing.vertextype.TransitStopDepart;
 import org.opentripplanner.util.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,6 +148,7 @@ public class RaptorDataBuilder implements GraphBuilder {
                         for (Edge e : segment.board.getFromVertex().getIncoming()) {
                             if (e instanceof PreBoardEdge) {
                                 route.stops[stop].stopVertex = (TransitStop) e.getFromVertex();
+                                route.stops[stop].departVertex = (TransitStopDepart) e.getToVertex();
                             }
                         }
                         route.boards[stop][pattern] = (TransitBoardAlight) segment.board;
@@ -141,6 +157,7 @@ public class RaptorDataBuilder implements GraphBuilder {
                         for (Edge e : segment.alight.getToVertex().getOutgoing()) {
                             if (e instanceof PreAlightEdge) {
                                 route.stops[stop].stopVertex = (TransitStop) e.getToVertex();
+                                route.stops[stop].arriveVertex = (TransitStopArrive) e.getFromVertex();
                             }
                         }
 

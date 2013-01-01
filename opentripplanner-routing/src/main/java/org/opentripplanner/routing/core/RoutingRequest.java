@@ -23,13 +23,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.opentripplanner.common.MavenVersion;
 import org.opentripplanner.common.model.NamedPlace;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
+import org.opentripplanner.routing.request.BannedStopSet;
 import org.opentripplanner.util.DateUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * 
  * NOTE this is the result of merging what used to be called a REQUEST and a TRAVERSEOPTIONS
  */
-@Data
+@Getter @Setter
 public class RoutingRequest implements Cloneable, Serializable {
     
     private static final long serialVersionUID = MavenVersion.VERSION.getUID();
@@ -58,11 +60,11 @@ public class RoutingRequest implements Cloneable, Serializable {
     public String routerId = "";
     /** The start location -- either a Vertex name or latitude, longitude in degrees */
     // TODO change this to Doubles and a Vertex
-    public String from;
+    public String from = ""; // allow missing 'from' for batch requests
     /** The start location's user-visible name */
     public String fromName;
     /** The end location (see the from field for format). */
-    public String to;
+    public String to = ""; // allow missing 'to' for batch requests
     /** The end location's user-visible name */
     public String toName;
     /** An unordered list of intermediate locations to be visited (see the from field for format). */
@@ -170,7 +172,7 @@ public class RoutingRequest implements Cloneable, Serializable {
     public HashSet<RouteSpec> bannedRoutes = new HashSet<RouteSpec>();
     
     /** Do not use certain trips */
-    public HashSet<AgencyAndId> bannedTrips = new HashSet<AgencyAndId>();
+    public HashMap<AgencyAndId, BannedStopSet> bannedTrips = new HashMap<AgencyAndId, BannedStopSet>();
 
     /** Set of preferred routes by user. */
     public HashSet<RouteSpec> preferredRoutes = new HashSet<RouteSpec>();
@@ -224,8 +226,10 @@ public class RoutingRequest implements Cloneable, Serializable {
     /** For the bike triangle, how important safety is */
     public double triangleSafetyFactor;
 
-    /** A sub-traverse options for another mode */
-    public RoutingRequest walkingOptions;
+    /**
+     * Options specifically for the case that you are walking a bicycle.
+     */
+    public RoutingRequest bikeWalkingOptions;
     
     /** This is true when a GraphPath is being traversed in reverse for optimization purposes. */
     public boolean reverseOptimizing = false;
@@ -298,7 +302,7 @@ public class RoutingRequest implements Cloneable, Serializable {
         bikeSpeed = 5; // 5 m/s, ~11 mph, a random bicycling speed
         carSpeed = 15; // 15 m/s, ~35 mph, a random driving speed        
         setModes(new TraverseModeSet(new TraverseMode[] { TraverseMode.WALK, TraverseMode.TRANSIT }));
-        walkingOptions = this;
+        bikeWalkingOptions = this;
     }
 
     public RoutingRequest(TraverseModeSet modes) {
@@ -334,7 +338,7 @@ public class RoutingRequest implements Cloneable, Serializable {
 
     public void setArriveBy(boolean arriveBy) {
         this.arriveBy = arriveBy;
-        walkingOptions.arriveBy = arriveBy;
+        bikeWalkingOptions.arriveBy = arriveBy;
         if (worstTime == Long.MAX_VALUE || worstTime == 0)
             worstTime = arriveBy ? 0 : Long.MAX_VALUE;
     }
@@ -346,29 +350,29 @@ public class RoutingRequest implements Cloneable, Serializable {
     public void setModes(TraverseModeSet modes) {
         this.modes = modes;
         if (modes.getBicycle()) {
-            walkingOptions = new RoutingRequest();
-            walkingOptions.setArriveBy(this.isArriveBy());
-            walkingOptions.maxWalkDistance = maxWalkDistance;
-            walkingOptions.walkSpeed *= 0.8; //walking bikes is slow
-            walkingOptions.walkReluctance *= 2.7; //and painful
-            walkingOptions.optimize = optimize;
-            walkingOptions.modes = modes.clone();
-            walkingOptions.modes.setBicycle(false);
-            walkingOptions.modes.setWalk(true);
-            walkingOptions.walkingBike = true;
+            bikeWalkingOptions = new RoutingRequest();
+            bikeWalkingOptions.setArriveBy(this.isArriveBy());
+            bikeWalkingOptions.maxWalkDistance = maxWalkDistance;
+            bikeWalkingOptions.walkSpeed *= 0.8; //walking bikes is slow
+            bikeWalkingOptions.walkReluctance *= 2.7; //and painful
+            bikeWalkingOptions.optimize = optimize;
+            bikeWalkingOptions.modes = modes.clone();
+            bikeWalkingOptions.modes.setBicycle(false);
+            bikeWalkingOptions.modes.setWalk(true);
+            bikeWalkingOptions.walkingBike = true;
         } else if (modes.getCar()) {
-            walkingOptions = new RoutingRequest();
-            walkingOptions.setArriveBy(this.isArriveBy());
-            walkingOptions.maxWalkDistance = maxWalkDistance;
-            walkingOptions.modes = modes.clone();
-            walkingOptions.modes.setBicycle(false);
-            walkingOptions.modes.setWalk(true);
+            bikeWalkingOptions = new RoutingRequest();
+            bikeWalkingOptions.setArriveBy(this.isArriveBy());
+            bikeWalkingOptions.maxWalkDistance = maxWalkDistance;
+            bikeWalkingOptions.modes = modes.clone();
+            bikeWalkingOptions.modes.setBicycle(false);
+            bikeWalkingOptions.modes.setWalk(true);
         }
     }
 
     public void setOptimize(OptimizeType optimize) {
         this.optimize = optimize;
-        walkingOptions.optimize = optimize;
+        bikeWalkingOptions.optimize = optimize;
     }
 
     public void setWheelchairAccessible(boolean wheelchairAccessible) {
@@ -380,8 +384,8 @@ public class RoutingRequest implements Cloneable, Serializable {
      * contraction to reduce the number of possible paths.
      */
     public void freezeTraverseMode() {
-        walkingOptions = clone();
-        walkingOptions.walkingOptions = new RoutingRequest(new TraverseModeSet());
+        bikeWalkingOptions = clone();
+        bikeWalkingOptions.bikeWalkingOptions = new RoutingRequest(new TraverseModeSet());
     }
 
     /**
@@ -469,10 +473,25 @@ public class RoutingRequest implements Cloneable, Serializable {
         }
     }
 
+    /**
+     * Clear the allowed modes.
+     */
+    public void clearModes() {
+    	modes.clear();
+    }
+    
+    /**
+     * Add a TraverseMode to the set of allowed modes.
+     * @param mode
+     */
     public void addMode(TraverseMode mode) { 
         modes.setMode(mode, true); 
     }
-
+    
+    /**
+     * Add multiple modes to the set of allowed modes.
+     * @param mList
+     */
     public void addMode(List<TraverseMode> mList) {
         for (TraverseMode m : mList) {
             addMode(m);
@@ -551,17 +570,17 @@ public class RoutingRequest implements Cloneable, Serializable {
 
     public void setTriangleSafetyFactor(double triangleSafetyFactor) {
         this.triangleSafetyFactor = triangleSafetyFactor;
-        walkingOptions.triangleSafetyFactor = triangleSafetyFactor;
+        bikeWalkingOptions.triangleSafetyFactor = triangleSafetyFactor;
     }
 
     public void setTriangleSlopeFactor(double triangleSlopeFactor) {
         this.triangleSlopeFactor = triangleSlopeFactor;
-        walkingOptions.triangleSlopeFactor = triangleSlopeFactor;
+        bikeWalkingOptions.triangleSlopeFactor = triangleSlopeFactor;
     }
 
     public void setTriangleTimeFactor(double triangleTimeFactor) {
         this.triangleTimeFactor = triangleTimeFactor;
-        walkingOptions.triangleTimeFactor = triangleTimeFactor;
+        bikeWalkingOptions.triangleTimeFactor = triangleTimeFactor;
     }
 
     public void setMaxTransfers(int maxTransfers) {
@@ -587,11 +606,11 @@ public class RoutingRequest implements Cloneable, Serializable {
         try {
             RoutingRequest clone = (RoutingRequest) super.clone();
             clone.bannedRoutes = (HashSet<RouteSpec>) bannedRoutes.clone();
-            clone.bannedTrips = (HashSet<AgencyAndId>) bannedTrips.clone();
-            if (this.walkingOptions != this)
-                clone.walkingOptions = this.walkingOptions.clone();
+            clone.bannedTrips = (HashMap<AgencyAndId, BannedStopSet>) bannedTrips.clone();
+            if (this.bikeWalkingOptions != this)
+                clone.bikeWalkingOptions = this.bikeWalkingOptions.clone();
             else
-                clone.walkingOptions = clone;
+                clone.bikeWalkingOptions = clone;
             return clone;
         } catch (CloneNotSupportedException e) {
             /* this will never happen since our super is the cloneable object */
@@ -661,6 +680,8 @@ public class RoutingRequest implements Cloneable, Serializable {
         if ( ! (o instanceof RoutingRequest))
             return false;
         RoutingRequest other = (RoutingRequest) o;
+        if (this.batch != other.batch)
+            return false;
         boolean endpointsMatch;
         if (this.batch) {
             if (this.arriveBy) {
@@ -717,8 +738,7 @@ public class RoutingRequest implements Cloneable, Serializable {
     /** Equality and hashCode should not consider the routing context, to allow SPT caching. */
     @Override
     public int hashCode() {
-        int hashCode = from.hashCode() * 524287  
-                + new Double(walkSpeed).hashCode() + new Double(bikeSpeed).hashCode() 
+        int hashCode =  new Double(walkSpeed).hashCode() + new Double(bikeSpeed).hashCode() 
                 + new Double(carSpeed).hashCode() + new Double(maxWeight).hashCode()
                 + (int) (worstTime & 0xffffffff) + getModes().hashCode()
                 + (isArriveBy() ? 8966786 : 0) + (wheelchairAccessible ? 731980 : 0)
@@ -736,8 +756,17 @@ public class RoutingRequest implements Cloneable, Serializable {
                 + new Boolean(reverseOptimizeOnTheFly).hashCode() * 95112799;
         if (batch) {
             hashCode *= -1;
+            // batch mode, only one of two endpoints matters
+            if (arriveBy) {
+                hashCode += to.hashCode() * 1327144003;
+            } else {
+                hashCode += from.hashCode() * 524287;
+            }
+            hashCode += numItineraries; // why is this only present here?
+        } else {
+            // non-batch, both endpoints matter
+            hashCode += from.hashCode() * 524287;
             hashCode += to.hashCode() * 1327144003;
-            hashCode += numItineraries;
         }
         return hashCode;
     }
@@ -825,9 +854,15 @@ public class RoutingRequest implements Cloneable, Serializable {
     }
 
     public void setMaxWalkDistance(double maxWalkDistance) {
+        if (maxWalkDistance == 0) 
+            return;
         this.maxWalkDistance = maxWalkDistance;
-        if (walkingOptions != null && walkingOptions != this) {
-            this.walkingOptions.setMaxWalkDistance(maxWalkDistance);
+        if (bikeWalkingOptions != null && bikeWalkingOptions != this) {
+            this.bikeWalkingOptions.setMaxWalkDistance(maxWalkDistance);
         }
+    }
+
+    public void banTrip(AgencyAndId trip) {
+        bannedTrips.put(trip, BannedStopSet.ALL);
     }
 }

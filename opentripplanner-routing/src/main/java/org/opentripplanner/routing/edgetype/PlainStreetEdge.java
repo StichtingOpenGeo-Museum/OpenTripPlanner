@@ -20,6 +20,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import org.opentripplanner.common.TurnRestriction;
 import org.opentripplanner.common.TurnRestrictionType;
 import org.opentripplanner.common.geometry.DirectionUtils;
@@ -31,6 +34,7 @@ import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.patch.Alert;
 import org.opentripplanner.routing.util.ElevationProfileSegment;
+import org.opentripplanner.routing.util.ElevationUtils;
 import org.opentripplanner.routing.vertextype.IntersectionVertex;
 import org.opentripplanner.routing.vertextype.StreetVertex;
 import org.slf4j.Logger;
@@ -55,47 +59,69 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
 
     private ElevationProfileSegment elevationProfileSegment;
 
+    @Getter
     private double length;
 
+    @Getter
     private LineString geometry;
-
+    
+    @Getter @Setter
     private String name;
 
+    @Getter @Setter
     private boolean wheelchairAccessible = true;
 
+    @Getter @Setter
     private StreetTraversalPermission permission;
 
-    private String id;
-
+    @Getter @Setter
     private int streetClass = CLASS_OTHERPATH;
-
+    
+    /**
+     * Marks that this edge is the reverse of the one defined in the source
+     * data. Does NOT mean fromv/tov are reversed.
+     */
     public boolean back;
     
+    @Getter @Setter
     private boolean roundabout = false;
 
+    @Getter
     private Set<Alert> notes;
 
+    @Setter
     private boolean hasBogusName;
 
+    @Getter @Setter
     private boolean noThruTraffic;
 
     /**
      * This street is a staircase
      */
+    @Getter @Setter
     private boolean stairs;
     
-    /** The speed in meters per second that an automobile can traverse this street segment at */
+    /**
+     * The speed (meters / sec) at which an automobile can traverse
+     * this street segment.
+     */
+    @Getter @Setter
     private float carSpeed;
     
     /** This street has a toll */
+    @Getter @Setter
     private boolean toll;
 
+    @Getter
     private Set<Alert> wheelchairNotes;
 
+    @Getter
     private List<TurnRestriction> turnRestrictions = Collections.emptyList();
 
+    @Getter
     public int inAngle;
 
+    @Getter
     public int outAngle;
 
     /**
@@ -112,9 +138,7 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         // use a default car speed of ~25 mph for splitter vertices and the like
         this(v1, v2, geometry, name, length, permission, back, 11.2f);
     }
-    
-    // Presently, we have plainstreetedges that connect both IntersectionVertexes and
-    // TurnVertexes
+
     public PlainStreetEdge(StreetVertex v1, StreetVertex v2, LineString geometry, 
             String name, double length,
             StreetTraversalPermission permission, boolean back, float carSpeed) {
@@ -212,16 +236,6 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
     }
 
     @Override
-    public LineString getGeometry() {
-        return geometry;
-    }
-
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
     public State traverse(State s0) {
         final RoutingRequest options = s0.getOptions();
         return doTraverse(s0, options, s0.getNonTransitMode());
@@ -229,19 +243,21 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
 
     private State doTraverse(State s0, RoutingRequest options, TraverseMode traverseMode) {
         Edge backEdge = s0.getBackEdge();
-        if (backEdge != null && 
-                (options.arriveBy ? (backEdge.getToVertex() == fromv) : (backEdge.getFromVertex() == tov))) {
-            //no illegal U-turns
+        if (backEdge != null
+                && (options.arriveBy ? (backEdge.getToVertex() == fromv)
+                        : (backEdge.getFromVertex() == tov))) {
+            // no illegal U-turns
             return null;
         }
         if (!canTraverse(options, traverseMode)) {
             if (traverseMode == TraverseMode.BICYCLE) {
                 // try walking bike since you can't ride here
-                return doTraverse(s0, options.getWalkingOptions(), TraverseMode.WALK);
+                return doTraverse(s0, options.getBikeWalkingOptions(),
+                        TraverseMode.WALK);
             }
             return null;
         }
-        
+
         double speed;
         
         // Automobiles have variable speeds depending on the edge type
@@ -288,10 +304,25 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
             }
         } else {
             if (options.isWalkingBike()) {
-                //take slopes into account when walking bikes
+                // take slopes into account when walking bikes
                 time = elevationProfileSegment.getSlopeSpeedEffectiveLength() / speed;
             }
             weight = time;
+            if (traverseMode.equals(TraverseMode.WALK)) {
+                // take slopes into account when walking
+                double costs = ElevationUtils.getWalkCostsForSlope(length, elevationProfileSegment.getMaxSlope());
+                // as the cost walkspeed is assumed to be for 4.8km/h (= 1.333 m/sec) we need to adjust
+                // for the walkspeed set by the user
+                weight = costs * ( 1.3333 / speed );
+                time = weight; //treat cost as time, as in the current model it actually is the same (this can be checked for maxSlope == 0)
+                /*
+                // debug code
+                if(weight > 100){
+                    double timeflat = length / speed;
+                    System.out.format("line length: %.1f m, slope: %.3f ---> slope costs: %.1f , weight: %.1f , time (flat):  %.1f %n", length, elevationProfileSegment.getMaxSlope(), costs, weight, timeflat);
+                }
+                */
+            }
         }
         if (isStairs()) {
             weight *= options.stairsReluctance;
@@ -314,7 +345,8 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
             
             final double realTurnCost;
             
-            /*
+            /* Compute turn cost.
+             * 
              * This is a subtle piece of code. Turn costs are evaluated differently during
              * forward and reverse traversal. During forward traversal of an edge, the turn
              * *into* that edge is used, while during reverse traversal, the turn *out of*
@@ -325,24 +357,18 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
              * that during reverse traversal, we must also use the speed for the mode of
              * the backEdge, rather than of the current edge.
              */
-            if (fromv instanceof IntersectionVertex) {
-                if (options.arriveBy) {
-                    if (!canTurnOnto(backPSE, s0, traverseMode))
-                        return null;
-    
-                    realTurnCost = ((IntersectionVertex) tov).computeTraversalCost(
-                            this, backPSE, traverseMode, options, (float) speed, backSpeed);
-                } else {
-                    if (!backPSE.canTurnOnto(this, s0, traverseMode))
-                        return null;
-                    realTurnCost = ((IntersectionVertex) fromv).computeTraversalCost(
-                            backPSE, this, traverseMode, options, backSpeed, (float) speed);
-                }
-            }
-            else {
-                LOG.warn("PlainStreetEdge originating from non-IntersectionVertex: {}, " +
-                		"setting turn cost to 0", fromv);
-                realTurnCost = 0;
+            if (options.arriveBy && tov instanceof IntersectionVertex) { // arrive-by search
+                if (!canTurnOnto(backPSE, s0, traverseMode))
+                    return null;
+                realTurnCost = ((IntersectionVertex) tov).computeTraversalCost(
+                        this, backPSE, traverseMode, options, (float) speed, backSpeed);
+            } else if (fromv instanceof IntersectionVertex) { // depart-after search
+                if (!backPSE.canTurnOnto(this, s0, traverseMode))
+                    return null;
+                realTurnCost = ((IntersectionVertex) fromv).computeTraversalCost(
+                        backPSE, this, traverseMode, options, backSpeed, (float) speed);
+            } else { // in case this is a temporary edge not connected to an IntersectionVertex
+                realTurnCost = 0; 
             }
                        
             if (traverseMode != TraverseMode.CAR) 
@@ -379,8 +405,11 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
     }
 
     /**
-     * Calculate the average automobile traversal speed of this segment, given the RoutingRequest,
-     * and return it in meters per second.
+     * Calculate the average automobile traversal speed of this segment, given
+     * the RoutingRequest, and return it in meters per second.
+     * 
+     * @param options
+     * @return
      */
     private double calculateCarSpeed(RoutingRequest options) {
         return this.carSpeed;
@@ -420,37 +449,8 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         return elevationProfileSegment.getBicycleSafetyEffectiveLength();
     }
 
-    public double getLength() {
-        return length;
-    }
-
-    public StreetTraversalPermission getPermission() {
-        return permission;
-    }
-
-    public void setPermission(StreetTraversalPermission permission) {
-        this.permission = permission;
-    }
-
-    public void setWheelchairAccessible(boolean wheelchairAccessible) {
-        this.wheelchairAccessible = wheelchairAccessible;
-    }
-
-    public boolean isWheelchairAccessible() {
-        return wheelchairAccessible;
-    }
-
-    public String getId() {
-        return id;
-    }
-
     private void writeObject(ObjectOutputStream out) throws IOException {
-        id = null; 
         out.defaultWriteObject();
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     @Override
@@ -461,21 +461,9 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
     public void setSlopeOverride(boolean slopeOverride) {
         elevationProfileSegment.setSlopeOverride(slopeOverride);
     }
-
-    public void setRoundabout(boolean roundabout) {
-        this.roundabout = roundabout;
-    }
-
-    public boolean isRoundabout() {
-        return roundabout;
-    }
-
-    public Set<Alert> getNotes() {
-    	return notes;
-    }
     
     public void setNote(Set<Alert> notes) {
-    	this.notes = notes;
+        this.notes = notes;
     }
     
     @Override
@@ -486,45 +474,9 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
     public boolean hasBogusName() {
         return hasBogusName;
     }
-    
-    public void setBogusName(boolean hasBogusName) {
-        this.hasBogusName = hasBogusName;
-    }
-
-    public void setNoThruTraffic(boolean noThruTraffic) {
-        this.noThruTraffic = noThruTraffic;
-    }
-
-    public boolean isNoThruTraffic() {
-        return noThruTraffic;
-    }
-
-    public boolean isStairs() {
-        return stairs;
-    }
-
-    public void setStairs(boolean stairs) {
-        this.stairs = stairs;
-    }
-
-    public void setName(String name) {
-       this.name = name;
-    }
 
     public void setWheelchairNote(Set<Alert> wheelchairNotes) {
         this.wheelchairNotes = wheelchairNotes;
-    }
-
-    public Set<Alert> getWheelchairNotes() {
-        return wheelchairNotes;
-    }
-
-    public int getStreetClass() {
-        return streetClass;
-    }
-
-    public void setStreetClass(int streetClass) {
-        this.streetClass = streetClass;
     }
 
     public void addTurnRestriction(TurnRestriction turnRestriction) {
@@ -541,10 +493,6 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         } catch (CloneNotSupportedException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public List<TurnRestriction> getTurnRestrictions() {
-        return turnRestrictions;
     }
 
     public boolean canTurnOnto(Edge e, State state, TraverseMode mode) {
@@ -567,29 +515,9 @@ public class PlainStreetEdge extends StreetEdge implements Cloneable {
         return true;
     }
 
-    public int getInAngle() {
-        return inAngle;
-    }
-
-    public int getOutAngle() {
-        return outAngle;
-    }
-
     @Override
     public ElevationProfileSegment getElevationProfileSegment() {
         return elevationProfileSegment;
-    }
-
-    public void setCarSpeed(float carSpeed) {
-        this.carSpeed = carSpeed;         
-    }
-    
-    public float getCarSpeed() {
-        return carSpeed;
-    }
-    
-    public void setToll(boolean toll) {
-        this.toll = toll;
     }
     
     public boolean getToll() {

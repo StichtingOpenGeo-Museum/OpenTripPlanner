@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.vividsolutions.jts.geom.LineString;
 
-public class FrequencyBoard extends Edge  implements OnBoardForwardEdge {
+public class FrequencyBoard extends Edge implements OnBoardForwardEdge, PatternEdge {
     private static final long serialVersionUID = 7919511656529752927L;
 
     private static final Logger _log = LoggerFactory.getLogger(FrequencyBoard.class);
@@ -114,11 +114,8 @@ public class FrequencyBoard extends Edge  implements OnBoardForwardEdge {
             long currentTime = state0.getTime();
             int bestWait = -1;
             TraverseMode mode = state0.getNonTransitMode();
-            if (options.bannedTrips.contains(trip.getId())) {
-                //This behaves a little differently than with ordinary trip patterns,
-                //because trips don't really have strong identities in frequency-based
-                //plans.  I expect that reasonable plans will still be produced, since
-                //we used to use route banning and that was not so bad.
+            if (options.bannedTrips.containsKey(trip.getId())) {
+                //see comment in FrequencyAlight for details 
                 return null;
             }
             for (ServiceDay sd : rctx.serviceDays) {
