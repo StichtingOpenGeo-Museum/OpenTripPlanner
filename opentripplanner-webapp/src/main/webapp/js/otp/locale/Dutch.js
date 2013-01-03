@@ -42,7 +42,6 @@ otp.locale.Dutch = {
         next             : "Volgende positie"
     },
 	
-	  // TODO Localize Me
     bikeTriangle : 
     {
         safeName : "Veiligst",
@@ -274,6 +273,7 @@ otp.locale.Dutch = {
             arriveDepart  : "Vertrek/Aankomst voor",
             mode          : "Reis per",
             wheelchair    : "Rolstoeltoegankelijk", 
+            hst           : "Incl. HST-treinen",
             go            : "Ga",
             planTrip      : "Plan je reis",
             newTrip       : "Nieuwe reis"

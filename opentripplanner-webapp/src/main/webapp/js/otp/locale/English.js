@@ -269,6 +269,7 @@ otp.locale.English = {
             arriveDepart  : "Arrive by/Depart at",
             mode          : "Travel by",
             wheelchair    : "Wheelchair accessible trip", 
+            hst           : "Incl. HS-trains",
             go            : "Go",
             planTrip      : "Plan Your Trip",
             newTrip       : "New trip"

@@ -60,6 +60,7 @@ otp.planner.StaticForms = {
     m_optimizeForm        : null,
     m_modeStore           : null,
     m_modeForm            : null,
+    m_hstForm             : null,
     m_wheelchairForm      : null,
     m_optionsManager      : null,
 
@@ -632,7 +633,8 @@ otp.planner.StaticForms = {
                 forms.m_walkSpeedForm.setValue(params.walkSpeed);
             if(params.wheelchair && this.planner.options.showWheelchairForm)
                 forms.m_wheelchairForm.setValue(params.wheelchair);
-
+            if (params.hst)
+                forms.m_hstForm.setValue(params.hst);
             // max transfers url param sent to API
             if(params.maxTransfers && params.maxTransfers >= 0 && params.maxTransfers < 1000)
                 this.planner.maxTransfers = Number(params.maxTransfers);
@@ -769,7 +771,8 @@ otp.planner.StaticForms = {
             retVal.wheelchair      = this.m_wheelchairForm.getValue();
         if(this.planner.options.showIntermediateForms)
             retVal.intermediate_places = ''; //TODO: intermediate stops
-
+        if (!this.m_hstForm.getValue())
+            retVal.bannedRoutes = '200_Thalys,200_Fyra,200_200-HSI,200_200-HSN,200_200-THA';
         try
         {
             retVal.time = retVal.time.replace(/\./g, "");
@@ -777,7 +780,6 @@ otp.planner.StaticForms = {
         catch(e)
         {
         }
-
         return retVal; 
     },
 
@@ -1342,6 +1344,26 @@ otp.planner.StaticForms = {
             forceSelection: true,
             selectOnFocus:  true
         });
+
+        this.m_hstForm = new Ext.form.Checkbox({
+            id:             'trip-hst-form',
+            name:           'hst',
+            hiddenName:     'hst',
+            fieldLabel:     this.locale.tripPlanner.labels.hst,
+            inputValue:     'true',
+            displayField:   'text',
+            valueField:     'opt',
+            anchor:         this.FIELD_ANCHOR,
+            mode:           'local',
+            triggerAction:  'all',
+            editable:       false,
+            allowBlank:     false,
+            lazyRender:     false,
+            typeAhead:      true,
+            forceSelection: true,
+            value:          true,
+            selectOnFocus:  true
+        });
         
         this.m_bikeTriangleContainer = new Ext.Panel({  
             name    :           'bikeTriangleContainer'
@@ -1368,14 +1390,15 @@ otp.planner.StaticForms = {
 
             if(this.planner.options.showWheelchairForm)
                 usecfg.wheelchair = this.m_wheelchairForm;
-
+            usecfg.hst = this.m_hstForm;
             this.m_optionsManager = new otp.planner.FormsOptionsManager(usecfg);
         }
 
         var retVal = [this.m_modeForm, this.m_optimizeForm, this.m_bikeTriangleContainer, this.m_maxWalkDistanceForm, this.m_walkSpeedForm];
         if(this.planner.options.showWheelchairForm)
             retVal.push(this.m_wheelchairForm);
-
+        this.m_hstForm.setValue(true);
+        retVal.push(this.m_hstForm);
         return retVal;
 
     },
