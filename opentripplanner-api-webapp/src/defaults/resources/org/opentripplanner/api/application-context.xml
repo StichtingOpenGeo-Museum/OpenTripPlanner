@@ -15,14 +15,25 @@
 	<context:component-scan base-package="org.opentripplanner.routing.impl"/>
 
 	<bean id="prototypeRoutingRequest" class="org.opentripplanner.routing.core.RoutingRequest">
-		<!-- Set default routing parameters here -->
+                <property name="maxTransfers" value="10" />
+                <property name="maxWalkDistance" value="4000" />
+                <property name="walkReluctance" value="1.2" />
+                <property name="walkBoardCost" value="#{ 20 * 60 }" />
+                <property name="bikeBoardCost" value="#{ 20 * 60 }" />
+                <property name="transferSlack" value="#{ 4 * 60 }" />
 	</bean>
 
+        <bean id="pathService" class="org.opentripplanner.routing.impl.SimplifiedPathServiceImpl">
+                <property name="timeout" value="2.0" />
+        </bean>
+
+<!--
 	<bean id="pathService" class="org.opentripplanner.routing.impl.RetryingPathServiceImpl">
         <property name="firstPathTimeout" value="10.0" />
         <property name="multiPathTimeout" value="1.0" />
 	</bean>
- 
+--> 
+
 	<!-- Replacement pathService for testing multi-objective search -->
 	<!--
 	<bean id="pathService" class="org.opentripplanner.routing.impl.MultiObjectivePathServiceImpl">
