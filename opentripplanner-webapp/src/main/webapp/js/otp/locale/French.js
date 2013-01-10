@@ -258,6 +258,7 @@ otp.locale.French = {
             arriveDepart    : "Arriver à/Partir de",
             mode : "Voyager par",
             wheelchair : "Accessible aux fauteuils roulants",
+            hst : "inclure les TGV",
             go : "Go",
             planTrip : "Calculer un itinéraire",
             newTrip : "Nouvel itinéraire"
@@ -319,9 +320,21 @@ otp.locale.French = {
 
         arriveDepart : [ [ 'false', 'Départ' ], [ 'true', 'Arriver' ] ],
 
-        maxWalkDistance : [ [ '200', '200 m' ], [ '500', '500 m' ],
-                [ '1000', '1 km' ], [ '1500', '1,5 km' ], [ '5000', '5 km' ],
-                [ '10000', '10 km' ] ],
+        maxWalkDistance : [
+            ['100',   '100 m'],
+            ['250',   '250 m'],
+            ['500',   '500 m'],
+            ['750',  '750 m'],
+            ['1000',  '1 km'],
+            ['2000',  '2 km'],
+            ['3000',  '3 km'],
+            ['4000',  '4 km'],
+            ['5000',  '5 km'],
+            ['10000',  '10 km'],
+            ['15000',  '15 km'],
+            ['20000',  '20 km'],
+            ['30000',  '30 km']
+        ],
                 
         walkSpeed :
         [

@@ -9,7 +9,19 @@
 // step 1: make sure we have some type of otp.config, and otp.config.local defined
 if(typeof(otp) == "undefined" || otp == null) otp = {};
 if(typeof(otp.config) == "undefined" || otp.config == null) otp.config = {};
-if(typeof(otp.config.locale) == "undefined" || otp.config.locale == null) otp.config.locale = otp.locale.Dutch;
+if(typeof(otp.config.locale) == "undefined" || otp.config.locale == null) otp.config.locale = otp.locale.English_IR;
+if (window.navigator.language != null){
+    lang = window.navigator.language;
+    if (lang.indexOf("nl") != -1){
+        otp.config.locale = otp.locale.Dutch;
+    }else if (lang.indexOf("fr") != -1){
+        otp.config.locale = otp.locale.French;
+    }else if (lang.indexOf("de") != -1){
+        otp.config.locale = otp.locale.German;
+    }else if (lang == 'en-UK'){
+        otp.config.locale = otp.locale.English_UK;
+    }
+}
 
 /* UNCOMMNET the following to have default fares in the UI -- note: routing engine fares take precedence 
 otp.config.default_fares = {
@@ -108,7 +120,7 @@ otp.config_defaults = {
         geocoder  :
         {
             enabled : true,
-            url     : "http://bag42.nl/api/v0/geocode/otp",  
+            url     : "http://bag42.nl/api/v0/geocode/json",  
             addressParamName : "address"
         },
         xxfromToOverride : new Ext.Template('<div class="mapHelp">' + otp.config.locale.config.rightClickMsg + '</div>')
