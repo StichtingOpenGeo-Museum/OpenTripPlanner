@@ -113,7 +113,7 @@ public class GtfsLibrary {
         }else if (routeType >= 1000 && routeType < 1100){ //Water Transport Service
             return TraverseMode.FERRY;
         }else if (routeType >= 1100 && routeType < 1200){ //Air Service
-            throw new IllegalArgumentException("Air transport not supported" + route.getType());
+            throw new IllegalArgumentException("Air transport not supported" + routeType);
         }else if (routeType >= 1200 && routeType < 1300){ //Ferry Service
             return TraverseMode.FERRY;
         }else if (routeType >= 1300 && routeType < 1400){ //Telecabin Service
@@ -121,11 +121,11 @@ public class GtfsLibrary {
         }else if (routeType >= 1400 && routeType < 1500){ //Funicalar Service
             return TraverseMode.FUNICULAR;
         }else if (routeType >= 1500 && routeType < 1600){ //Taxi Service
-            throw new IllegalArgumentException("Taxi service not supported" + route.getType());
+            throw new IllegalArgumentException("Taxi service not supported" + routeType);
         }else if (routeType >= 1600 && routeType < 1700){ //Self drive
             return TraverseMode.CAR;
         }
-        switch (route.getType()) {
+        switch (routeType) {
         case 0:
         case 900:
             return TraverseMode.TRAM;
@@ -149,7 +149,7 @@ public class GtfsLibrary {
         case 7:
             return TraverseMode.FUNICULAR;
         default:
-            throw new IllegalArgumentException("unknown gtfs route type " + route.getType());
+            throw new IllegalArgumentException("unknown gtfs route type " + routeType);
         }
     }
 
